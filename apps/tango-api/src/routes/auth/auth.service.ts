@@ -3,7 +3,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { RegisterDto, LoginDto } from './dto';
-//a
+
+export interface JwtPayload {
+  sub: string;
+  email: string;
+  name: string;
+}
+
 @Injectable()
 export class AuthService {
   constructor(private prisma: PrismaService, private jwt: JwtService) {}
@@ -32,7 +38,20 @@ export class AuthService {
   }
 
   private issue(user: any) {
-    const payload = { sub: user.id, email: user.email, name: user.display_name };
-    return { access_token: this.jwt.sign(payload, { secret: 'supersecret', expiresIn: '7d' }) };
+    const payload: JwtPayload = { sub: user.id, email: user.email, name: user.display_name };
+    const access_token = this.jwt.sign(payload);
+    return {
+      access_token,
+      user: { id: user.id, email: user.email, display_name: user.display_name, role: user.role },
+    };
+  }
+
+  async getMe(userId: string) {
+    const user = await this.prisma.users.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, display_name: true, role: true, created_at: true },
+    });
+    return user;
   }
 }
+
