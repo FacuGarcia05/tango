@@ -1,0 +1,375 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model activities {
+  id         String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String        @db.Uuid
+  type       activity_type
+  ref_id     String?       @db.Uuid
+  target_id  String?       @db.Uuid
+  metadata   Json?
+  created_at DateTime      @default(now()) @db.Timestamptz(6)
+  users      users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([type])
+  @@index([user_id, created_at(sort: Desc)], map: "activities_user_created_idx")
+}
+
+model comments {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String   @db.Uuid
+  review_id  String   @db.Uuid
+  body       String
+  is_deleted Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  reviews    reviews  @relation(fields: [review_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([review_id], map: "comments_review_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model daily_tango_attempts {
+  id                     String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  challenge_id           String                 @db.Uuid
+  user_id                String                 @db.Uuid
+  guess_game_id          String?                @db.Uuid
+  attempt_number         Int
+  won                    Boolean                @default(false)
+  played_at              DateTime               @default(now()) @db.Timestamptz(6)
+  daily_tango_challenges daily_tango_challenges @relation(fields: [challenge_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  games                  games?                 @relation(fields: [guess_game_id], references: [id], onUpdate: NoAction)
+  users                  users                  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([challenge_id, user_id, attempt_number])
+  @@index([user_id], map: "daily_tango_attempts_user_idx")
+}
+
+model daily_tango_challenges {
+  id                   String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  challenge_date       DateTime               @unique @db.Date
+  solution_game_id     String                 @db.Uuid
+  clue_data            Json?
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  daily_tango_attempts daily_tango_attempts[]
+  games                games                  @relation(fields: [solution_game_id], references: [id], onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model follows {
+  follower_id                      String   @db.Uuid
+  followee_id                      String   @db.Uuid
+  created_at                       DateTime @default(now()) @db.Timestamptz(6)
+  users_follows_followee_idTousers users    @relation("follows_followee_idTousers", fields: [followee_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_follows_follower_idTousers users    @relation("follows_follower_idTousers", fields: [follower_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([follower_id, followee_id])
+}
+
+model game_genres {
+  game_id  String @db.Uuid
+  genre_id Int
+  games    games  @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  genres   genres @relation(fields: [genre_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([game_id, genre_id])
+}
+
+model game_media {
+  id          String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  game_id     String     @db.Uuid
+  user_id     String?    @db.Uuid
+  type        media_type
+  url         String
+  provider    String?
+  provider_id String?
+  is_hidden   Boolean    @default(false)
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+  games       games      @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users       users?     @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+
+  @@index([game_id], map: "game_media_game_idx")
+  @@index([user_id], map: "game_media_user_idx")
+}
+
+model game_platforms {
+  game_id     String    @db.Uuid
+  platform_id Int
+  games       games     @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  platforms   platforms @relation(fields: [platform_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([game_id, platform_id])
+}
+
+model game_stats {
+  game_id      String   @id @db.Uuid
+  rating_avg   Decimal  @default(0) @db.Decimal(3, 2)
+  rating_count Int      @default(0)
+  review_count Int      @default(0)
+  dlc_count    Int      @default(0)
+  media_count  Int      @default(0)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  games        games    @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model games {
+  id                     String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  slug                   String                   @unique
+  title                  String
+  description            String?
+  cover_url              String?
+  release_date           DateTime?                @db.Date
+  est_length_hours       Int?
+  type                   game_type                @default(base)
+  parent_game_id         String?                  @db.Uuid
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  daily_tango_attempts   daily_tango_attempts[]
+  daily_tango_challenges daily_tango_challenges[]
+  game_genres            game_genres[]
+  game_media             game_media[]
+  game_platforms         game_platforms[]
+  game_stats             game_stats?
+  games                  games?                   @relation("gamesTogames", fields: [parent_game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  other_games            games[]                  @relation("gamesTogames")
+  list_items             list_items[]
+  parties                parties[]
+  ratings                ratings[]
+  reviews                reviews[]
+
+  @@index([parent_game_id], map: "games_parent_idx")
+  @@index([release_date], map: "games_release_idx")
+}
+
+model genres {
+  id          Int           @id @default(autoincrement())
+  slug        String        @unique
+  name        String        @unique
+  game_genres game_genres[]
+}
+
+model list_items {
+  list_id  String   @db.Uuid
+  game_id  String   @db.Uuid
+  position Int      @default(1)
+  added_at DateTime @default(now()) @db.Timestamptz(6)
+  games    games    @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  lists    lists    @relation(fields: [list_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([list_id, game_id])
+  @@index([list_id, position], map: "list_items_position_idx")
+}
+
+model lists {
+  id          String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id     String       @db.Uuid
+  name        String
+  description String?
+  is_private  Boolean      @default(false)
+  created_at  DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime     @default(now()) @db.Timestamptz(6)
+  list_items  list_items[]
+  users       users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model news {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  title        String
+  url          String
+  source       String?
+  published_at DateTime? @db.Timestamptz(6)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([published_at(sort: Desc)], map: "news_published_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model parties {
+  id            String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  game_id       String          @db.Uuid
+  host_user_id  String          @db.Uuid
+  platform      String?
+  timezone      String?
+  capacity      Int
+  status        party_status    @default(open)
+  description   String?
+  created_at    DateTime        @default(now()) @db.Timestamptz(6)
+  games         games           @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users         users           @relation(fields: [host_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  party_members party_members[]
+
+  @@index([game_id], map: "parties_game_idx")
+  @@index([status])
+}
+
+model party_members {
+  party_id  String   @db.Uuid
+  user_id   String   @db.Uuid
+  joined_at DateTime @default(now()) @db.Timestamptz(6)
+  parties   parties  @relation(fields: [party_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users     users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([party_id, user_id])
+}
+
+model platforms {
+  id             Int              @id @default(autoincrement())
+  slug           String           @unique
+  name           String           @unique
+  game_platforms game_platforms[]
+}
+
+
+model profiles {
+  user_id       String   @id @db.Uuid
+  bio           String?
+  backdrop_url  String?
+  fav_platforms String[]
+  fav_genres    String[]
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @default(now()) @db.Timestamptz(6)
+  users         users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ratings {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String   @db.Uuid
+  game_id    String   @db.Uuid
+  score      Decimal  @db.Decimal(2, 1)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  games      games    @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, game_id])
+  @@index([game_id], map: "ratings_game_idx")
+  @@index([user_id], map: "ratings_user_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reports {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  reporter_id String   @db.Uuid
+  target_type String
+  target_id   String   @db.Uuid
+  reason      String?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  users       users    @relation(fields: [reporter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([target_type, target_id], map: "reports_target_idx")
+}
+
+model review_likes {
+  user_id    String   @db.Uuid
+  review_id  String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  reviews    reviews  @relation(fields: [review_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_id, review_id])
+}
+
+model review_media {
+  id          String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  review_id   String     @db.Uuid
+  type        media_type
+  url         String
+  provider    String?
+  provider_id String?
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+  reviews     reviews    @relation(fields: [review_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([review_id], map: "review_media_review_idx")
+}
+
+model reviews {
+  id           String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id      String                   @db.Uuid
+  game_id      String                   @db.Uuid
+  title        String?
+  body         String
+  has_spoilers Boolean                  @default(false)
+  is_deleted   Boolean                  @default(false)
+  created_at   DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime                 @default(now()) @db.Timestamptz(6)
+  body_tsv     Unsupported("tsvector")?
+  comments     comments[]
+  review_likes review_likes[]
+  review_media review_media[]
+  games        games                    @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users        users                    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "reviews_created_idx")
+  @@index([game_id], map: "reviews_game_idx")
+  @@index([body_tsv], map: "reviews_tsv_idx", type: Gin)
+  @@index([user_id], map: "reviews_user_idx")
+}
+
+model users {
+  id                                 String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email                              String                 @unique @db.Citext
+  password_hash                      String
+  display_name                       String
+  avatar_url                         String?
+  role                               user_role              @default(user)
+  created_at                         DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at                         DateTime               @default(now()) @db.Timestamptz(6)
+  activities                         activities[]
+  comments                           comments[]
+  daily_tango_attempts               daily_tango_attempts[]
+  follows_follows_followee_idTousers follows[]              @relation("follows_followee_idTousers")
+  follows_follows_follower_idTousers follows[]              @relation("follows_follower_idTousers")
+  game_media                         game_media[]
+  lists                              lists[]
+  parties                            parties[]
+  party_members                      party_members[]
+  profiles                           profiles?
+  ratings                            ratings[]
+  reports                            reports[]
+  review_likes                       review_likes[]
+  reviews                            reviews[]
+}
+
+enum activity_type {
+  follow
+  rating_added
+  review_created
+  list_published
+  list_item_added
+  party_created
+  party_joined
+}
+
+enum game_type {
+  base
+  dlc
+}
+
+enum media_type {
+  image
+  video
+}
+
+enum party_status {
+  open
+  closed
+  full
+  cancelled
+}
+
+enum user_role {
+  user
+  admin
+  moderator
+}
+
+
