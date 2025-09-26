@@ -1,8 +1,9 @@
 ﻿"use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -17,6 +18,12 @@ export default function Navbar() {
   const pathname = usePathname();
   const { user, loading, refresh, setUser } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const initials = useMemo(() => {
+    if (!user) return "?";
+    const source = user.displayName || user.email;
+    return source.trim().charAt(0).toUpperCase() || "?";
+  }, [user]);
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -35,36 +42,38 @@ export default function Navbar() {
 
   const renderAuthActions = () => {
     if (loading) {
-      return <span className="text-sm text-slate-500">Verificando sesion...</span>;
+      return <span className="text-sm text-text-muted">Verificando sesión...</span>;
     }
 
     if (user) {
       return (
         <div className="flex items-center gap-3">
-          <span className="hidden text-sm font-medium text-slate-700 sm:inline">
+          <span className="hidden text-sm font-medium text-text-muted sm:inline">
             {user.displayName || user.email}
           </span>
           <button
             onClick={handleLogout}
-            className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-75"
+            className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-contrast shadow transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isLoggingOut}
           >
             {isLoggingOut ? "Saliendo..." : "Logout"}
           </button>
           <Link
             href="/me"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-700 transition hover:border-slate-500 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-surface ring-2 ring-primary/20 transition hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             aria-label="Ver perfil"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="h-5 w-5"
-              aria-hidden="true"
-            >
-              <path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5Zm0 2c-4.971 0-9 3.134-9 7 0 .552.448 1 1 1h16c.552 0 1-.448 1-1 0-3.866-4.029-7-9-7Z" />
-            </svg>
+            {user.avatarUrl ? (
+              <Image
+                src={user.avatarUrl}
+                alt={user.displayName || user.email}
+                width={40}
+                height={40}
+                className="h-10 w-10 rounded-full object-cover"
+              />
+            ) : (
+              <span className="text-sm font-semibold text-text">{initials}</span>
+            )}
           </Link>
         </div>
       );
@@ -74,13 +83,13 @@ export default function Navbar() {
       <div className="flex items-center gap-3 text-sm font-medium">
         <Link
           href="/login"
-          className="text-slate-700 transition hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          className="rounded-md border border-border px-3 py-1.5 text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
         >
           Login
         </Link>
         <Link
           href="/register"
-          className="rounded-md bg-slate-900 px-3 py-1.5 text-white shadow transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          className="rounded-md bg-primary px-3 py-1.5 text-primary-contrast shadow transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
         >
           Registrarse
         </Link>
@@ -89,16 +98,16 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+    <nav className="sticky top-0 z-50 border-b border-border/60 bg-bg/80 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
         <div className="flex items-center gap-6">
           <Link
             href="/"
-            className="text-lg font-semibold tracking-tight text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            className="text-lg font-semibold tracking-tight text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
           >
             Tango
           </Link>
-          <div className="flex items-center gap-4 text-sm font-medium text-slate-600">
+          <div className="flex items-center gap-4 text-sm font-medium text-text-muted">
             {navLinks.map(({ href, label }) => {
               const isActive = pathname === href;
               return (
@@ -107,8 +116,8 @@ export default function Navbar() {
                   href={href}
                   className={
                     isActive
-                      ? "text-slate-900"
-                      : "transition-colors hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                      ? "text-text"
+                      : "transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                   }
                 >
                   {label}

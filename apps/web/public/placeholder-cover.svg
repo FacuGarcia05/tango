@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="400" height="600" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="600" fill="url(#grad)" />
+  <text x="50%" y="50%" text-anchor="middle" fill="#38bdf8" font-family="Arial, sans-serif" font-size="48" font-weight="600" letter-spacing="4">
+    TANGO
+  </text>
+</svg>

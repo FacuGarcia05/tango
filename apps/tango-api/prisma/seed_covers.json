@@ -1,0 +1,6 @@
+{
+  "_comment": "Mapea slug -> URL de portada.",
+  "celeste": "https://upload.wikimedia.org/wikipedia/en/9/9a/Celeste_box_art_final.png",
+  "the-witcher-3": "https://upload.wikimedia.org/wikipedia/en/0/0c/Witcher_3_cover_art.jpg",
+  "hades": "https://upload.wikimedia.org/wikipedia/en/e/e4/Hades_cover_art.jpg"
+}

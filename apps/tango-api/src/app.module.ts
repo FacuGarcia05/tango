@@ -1,10 +1,12 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+
 import { PrismaModule } from './prisma/prisma.module';
-import { GamesModule } from './routes/games/games.module';
 import { AuthModule } from './routes/auth/auth.module';
-import { ReviewsModule } from './routes/reviews/reviews.module';
+import { GamesModule } from './routes/games/games.module';
 import { RatingsModule } from './routes/ratings/ratings.module';
+import { ReviewsModule } from './routes/reviews/reviews.module';
+import { UsersModule } from './routes/users/users.module';
 
 @Module({
   imports: [
@@ -14,7 +16,7 @@ import { RatingsModule } from './routes/ratings/ratings.module';
     AuthModule,
     ReviewsModule,
     RatingsModule,
+    UsersModule,
   ],
 })
 export class AppModule {}
-//a

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -29,7 +29,7 @@ export function LogoutButton({ className = "" }: { className?: string }) {
   return (
     <button
       onClick={handleLogout}
-      className={`rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-75 ${className}`}
+      className={`rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       disabled={loading}
     >
       {loading ? "Cerrando sesion..." : "Cerrar sesion"}

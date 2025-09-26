@@ -42,7 +42,7 @@ export function FiltersBar({
   const selectedGenres = useMemo(() => new Set(filters.genres), [filters.genres]);
   const selectedPlatforms = useMemo(
     () => new Set(filters.platforms),
-    [filters.platforms]
+    [filters.platforms],
   );
 
   const toggleMultiValue = (value: string, key: "genres" | "platforms") => {
@@ -78,9 +78,9 @@ export function FiltersBar({
   };
 
   return (
-    <div className="space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="space-y-6 rounded-3xl border border-border bg-surface/90 p-6 shadow-lg">
       <div>
-        <label htmlFor="search" className="text-sm font-medium text-gray-700">
+        <label htmlFor="search" className="text-sm font-medium text-text">
           Buscar juegos
         </label>
         <input
@@ -88,22 +88,22 @@ export function FiltersBar({
           type="search"
           value={searchValue}
           onChange={(event) => setSearchValue(event.target.value)}
-          placeholder="Elden Ring, Hades, Zelda…"
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+          placeholder="Elden Ring, Hades, Zelda..."
+          className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-slate-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60"
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         <fieldset className="space-y-2">
-          <legend className="text-sm font-semibold text-gray-700">Géneros</legend>
-          <div className="space-y-1 rounded-md border border-gray-200 p-3 max-h-40 overflow-y-auto">
+          <legend className="text-sm font-semibold text-text">Generos</legend>
+          <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-border/80 bg-bg/40 p-3">
             {genreOptions.map((genre) => (
-              <label key={genre.slug} className="flex items-center gap-2 text-sm text-gray-600">
+              <label key={genre.slug} className="flex items-center gap-2 text-sm text-text-muted">
                 <input
                   type="checkbox"
                   checked={selectedGenres.has(genre.slug)}
                   onChange={() => toggleMultiValue(genre.slug, "genres")}
-                  className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/60"
                 />
                 {genre.name}
               </label>
@@ -112,18 +112,15 @@ export function FiltersBar({
         </fieldset>
 
         <fieldset className="space-y-2">
-          <legend className="text-sm font-semibold text-gray-700">Plataformas</legend>
-          <div className="space-y-1 rounded-md border border-gray-200 p-3 max-h-40 overflow-y-auto">
+          <legend className="text-sm font-semibold text-text">Plataformas</legend>
+          <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-border/80 bg-bg/40 p-3">
             {platformOptions.map((platform) => (
-              <label
-                key={platform.slug}
-                className="flex items-center gap-2 text-sm text-gray-600"
-              >
+              <label key={platform.slug} className="flex items-center gap-2 text-sm text-text-muted">
                 <input
                   type="checkbox"
                   checked={selectedPlatforms.has(platform.slug)}
                   onChange={() => toggleMultiValue(platform.slug, "platforms")}
-                  className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/60"
                 />
                 {platform.name}
               </label>
@@ -132,45 +129,43 @@ export function FiltersBar({
         </fieldset>
 
         <div className="space-y-3">
-          <label className="text-sm font-semibold text-gray-700">Duración estimada</label>
+          <label className="text-sm font-semibold text-text">Duracion estimada</label>
           <select
             value={filters.duration}
             onChange={(event) => handleDurationChange(event.target.value as DurationFilter)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60"
           >
             <option value="">Todas</option>
-            <option value="short">Corta (≤10h)</option>
-            <option value="medium">Media (≤30h)</option>
+            <option value="short">Corta (&lt;=10h)</option>
+            <option value="medium">Media (&lt;=30h)</option>
             <option value="long">Larga (&gt;30h)</option>
           </select>
 
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+          <label className="flex items-center gap-2 text-sm font-semibold text-text">
             <input
               type="checkbox"
               checked={filters.includeDlc}
               onChange={(event) => onChange((prev) => ({ ...prev, includeDlc: event.target.checked }))}
-              className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary/60"
             />
             Incluir DLCs
           </label>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">Orden</label>
+            <label className="text-sm font-semibold text-text">Orden</label>
             <select
               value={filters.order}
               onChange={(event) => handleOrderChange(event.target.value as GamesFilters["order"])}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60"
             >
-              <option value="title">Título</option>
+              <option value="title">Titulo</option>
               <option value="release">Fecha de lanzamiento</option>
               <option value="rating">Rating</option>
             </select>
             <select
               value={filters.direction}
-              onChange={(event) =>
-                handleDirectionChange(event.target.value as GamesFilters["direction"])
-              }
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+              onChange={(event) => handleDirectionChange(event.target.value as GamesFilters["direction"])}
+              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60"
             >
               <option value="asc">Ascendente</option>
               <option value="desc">Descendente</option>
@@ -179,11 +174,11 @@ export function FiltersBar({
         </div>
 
         <div className="space-y-3">
-          <label className="text-sm font-semibold text-gray-700">Elementos por página</label>
+          <label className="text-sm font-semibold text-text">Elementos por pagina</label>
           <select
             value={filters.take}
             onChange={(event) => handleTakeChange(Number(event.target.value))}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60"
           >
             {takeOptions.map((value) => (
               <option key={value} value={value}>
@@ -195,14 +190,14 @@ export function FiltersBar({
           <button
             type="button"
             onClick={handleApply}
-            className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-gray-700"
+            className="w-full rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-contrast shadow transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
           >
             Aplicar
           </button>
           <button
             type="button"
             onClick={onReset}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:border-gray-900 hover:text-gray-900"
+            className="w-full rounded-md border border-border px-3 py-2 text-sm font-semibold text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
           >
             Limpiar filtros
           </button>

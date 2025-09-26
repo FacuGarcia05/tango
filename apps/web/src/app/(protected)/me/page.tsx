@@ -1,5 +1,1 @@
-﻿import { ProfileContent } from "./ProfileContent";
-
-export default function MePage() {
-  return <ProfileContent />;
-}
+﻿export { default } from './me_page';

@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { cookies } from "next/headers";
 
 import type { User } from "@/types";
@@ -39,26 +39,26 @@ export default async function Home() {
 
   if (user) {
     return (
-      <section className="space-y-8 rounded-lg bg-white p-10 shadow">
+      <section className="space-y-8 rounded-3xl border border-border bg-surface/90 p-10 shadow-xl">
         <div className="space-y-3">
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Tu espacio gamer</p>
-          <h1 className="text-4xl font-bold tracking-tight text-slate-900">
+          <p className="text-sm font-semibold uppercase tracking-wide text-text-muted">Tu espacio gamer</p>
+          <h1 className="text-4xl font-bold tracking-tight text-text">
             Hola, {user.displayName || user.email} <span aria-hidden>{"\u{1F44B}"}</span>
           </h1>
-          <p className="max-w-2xl text-lg text-slate-600">
+          <p className="max-w-2xl text-lg text-text-muted">
             Listo para continuar explorando nuevos mundos y aventuras? Segui descubriendo juegos, listas y resenas en Tango.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <Link
             href="/games"
-            className="rounded-md bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            className="rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-contrast shadow transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
           >
             Continuar explorando
           </Link>
           <Link
             href="/me"
-            className="rounded-md border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-slate-500 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            className="rounded-md border border-border px-5 py-2.5 text-sm font-semibold text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
           >
             Ver mi perfil
           </Link>
@@ -68,12 +68,10 @@ export default async function Home() {
   }
 
   return (
-    <section className="space-y-8 rounded-lg bg-white p-10 shadow">
+    <section className="space-y-8 rounded-3xl border border-border bg-surface/90 p-10 shadow-xl">
       <div className="space-y-4">
-        <h1 className="text-4xl font-bold tracking-tight text-slate-900">
-          Bienvenido a Tango
-        </h1>
-        <p className="max-w-2xl text-lg text-slate-600">
+        <h1 className="text-4xl font-bold tracking-tight text-text">Bienvenido a Tango</h1>
+        <p className="max-w-2xl text-lg text-text-muted">
           Descubri, lista y comenta tus videojuegos favoritos. Explora el catalogo completo, segui a tus amistades y mantenete al dia con tu backlog gamer.
         </p>
       </div>
@@ -81,19 +79,19 @@ export default async function Home() {
       <div className="flex flex-wrap items-center gap-4">
         <Link
           href="/register"
-          className="rounded-md bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          className="rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-contrast shadow transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
         >
           Crear cuenta
         </Link>
         <Link
           href="/login"
-          className="rounded-md border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:border-slate-500 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          className="rounded-md border border-border px-5 py-2.5 text-sm font-semibold text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
         >
           Iniciar sesion
         </Link>
         <Link
           href="/games"
-          className="text-sm font-semibold text-slate-700 underline-offset-4 transition hover:text-slate-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          className="text-sm font-semibold text-primary underline-offset-4 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
         >
           Ver catalogo
         </Link>

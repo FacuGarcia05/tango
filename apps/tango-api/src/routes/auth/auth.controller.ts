@@ -1,11 +1,12 @@
 import { Body, Controller, Get, Post, UseGuards, Res, HttpCode, HttpStatus } from '@nestjs/common';
 import type { Response } from 'express';
-import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto } from './dto';
-import { JwtAuthGuard } from './jwt.guard';
-import { CurrentUser } from './current-user.decorator';
-import type { JwtPayload } from './auth.service';
 import { ApiBearerAuth, ApiBody, ApiCookieAuth, ApiTags } from '@nestjs/swagger';
+
+import { AuthService } from './auth.service';
+import type { JwtPayload } from './auth.service';
+import { LoginDto, RegisterDto } from './dto';
+import { CurrentUser } from './current-user.decorator';
+import { JwtAuthGuard } from './jwt.guard';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -13,7 +14,15 @@ export class AuthController {
   constructor(private service: AuthService) {}
 
   @Post('register')
-  @ApiBody({ schema: { properties: { email: { type: 'string', example: 'alice@example.com' }, displayName: { type: 'string', example: 'Alice' }, password: { type: 'string', example: 'secret123' } } } })
+  @ApiBody({
+    schema: {
+      properties: {
+        email: { type: 'string', example: 'alice@example.com' },
+        displayName: { type: 'string', example: 'Alice' },
+        password: { type: 'string', example: 'secret123' },
+      },
+    },
+  })
   async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
     const { access_token, user } = await this.service.register(dto);
     this.setAuthCookie(res, access_token);
@@ -40,7 +49,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiCookieAuth('access_token')
   async me(@CurrentUser() user: JwtPayload) {
-    return { user: await this.service.getMe(user.sub) };
+    return this.service.getMe(user.sub);
   }
 
   private setAuthCookie(res: Response, token: string) {
