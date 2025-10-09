@@ -1,12 +1,16 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
 
-export function LogoutButton({ className = "" }: { className?: string }) {
+interface LogoutButtonProps {
+  className?: string;
+}
+
+export function LogoutButton({ className = "" }: LogoutButtonProps) {
   const router = useRouter();
   const { refresh, setUser } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -28,6 +32,7 @@ export function LogoutButton({ className = "" }: { className?: string }) {
 
   return (
     <button
+      type="button"
       onClick={handleLogout}
       className={`rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       disabled={loading}
@@ -36,3 +41,4 @@ export function LogoutButton({ className = "" }: { className?: string }) {
     </button>
   );
 }
+

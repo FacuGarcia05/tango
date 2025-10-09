@@ -1,11 +1,13 @@
-﻿import Image from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { ApiError, apiServer } from "@/lib/api";
-import type { Game, GameDetail, Taxonomy, User } from "@/types";
+import { GameMediaUpload } from "@/components/GameMediaUpload";
+import { GameRatingPanel } from "@/components/GameRatingPanel";
 import { ReviewsSection } from "@/components/ReviewsSection";
 import { SetCoverModal } from "@/components/SetCoverModal";
+import { ApiError, apiServer } from "@/lib/api";
+import type { Game, GameDetail, Taxonomy, User } from "@/types";
 
 const FALLBACK_COVER = "/placeholder-cover.svg";
 
@@ -60,13 +62,37 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
     }),
   ]);
 
+  let myRating: { value: number | null } | null = null;
+  if (me) {
+    myRating = await apiServer<{ value: number | null }>(`/games/${slug}/ratings/me`).catch((error) => {
+      if (error instanceof ApiError && error.status === 404) {
+        return { value: null };
+      }
+      console.error("Failed to load rating for current user", error);
+      return { value: null };
+    });
+  }
+
   const genreEntries: Taxonomy[] = game.genres ?? [];
   const platformEntries: Taxonomy[] = game.platforms ?? [];
   const parentGame = game.parentGame ?? null;
   const coverUrl = game.cover_url ?? FALLBACK_COVER;
-  const ratingAvg = game.game_stats?.rating_avg ?? null;
-  const ratingCount = game.game_stats?.rating_count ?? 0;
-  const reviewCount = game.game_stats?.review_count ?? 0;
+  const parseMetric = (value: unknown) => {
+    if (value === null || value === undefined) return null;
+    const num = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  const ratingAvg = parseMetric(game.game_stats?.rating_avg);
+  const ratingCount = parseMetric(game.game_stats?.rating_count) ?? 0;
+  const reviewCount = parseMetric(game.game_stats?.review_count) ?? 0;
+  const normalizedStats = game.game_stats
+    ? {
+        rating_avg: ratingAvg,
+        rating_count: ratingCount,
+        review_count: reviewCount,
+      }
+    : null;
 
   return (
     <div className="space-y-12">
@@ -102,9 +128,9 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
               </span>
             ) : null}
             <span className="rounded-full border border-border px-3 py-1 text-text-muted">
-              Duración: {formatDuration(game.est_length_hours)}
+              Duracion: {formatDuration(game.est_length_hours)}
             </span>
-            {ratingAvg !== null ? (
+            {ratingAvg !== null && Number.isFinite(ratingAvg) ? (
               <span className="rounded-full bg-success/20 px-3 py-1 text-success">
                 Rating: {ratingAvg.toFixed(1)} ({ratingCount})
               </span>
@@ -118,10 +144,15 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
               <div>
                 <h1 className="text-4xl font-bold tracking-tight text-text">{game.title}</h1>
                 <p className="mt-2 text-sm text-text-muted">
-                  {genreEntries.length ? genreEntries.map((genre) => genre.name).join(", ") : "Géneros no disponibles"}
+                  {genreEntries.length ? genreEntries.map((genre) => genre.name).join(", ") : "Generos no disponibles"}
                 </p>
               </div>
-              {me ? <SetCoverModal slug={game.slug} currentCover={game.cover_url ?? ""} /> : null}
+              {me ? (
+                <div className="flex flex-col gap-3">
+                  <SetCoverModal slug={game.slug} currentCover={game.cover_url ?? ""} />
+                  <GameMediaUpload slug={game.slug} />
+                </div>
+              ) : null}
             </div>
 
             {game.description ? (
@@ -149,16 +180,23 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
               >
                 <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">DLC</div>
                 <div className="mt-2 text-base font-semibold text-text">{dlc.title}</div>
-                <div className="mt-1 text-xs text-text-muted">
-                  Lanzamiento: {formatReleaseDate(dlc.release_date)}
-                </div>
+                <div className="mt-1 text-xs text-text-muted">Lanzamiento: {formatReleaseDate(dlc.release_date)}</div>
               </Link>
             ))}
           </div>
         </section>
       ) : null}
 
+      <GameRatingPanel slug={game.slug} stats={normalizedStats} initialValue={myRating?.value ?? null} currentUser={me} />
+
       <ReviewsSection slug={game.slug} gameId={game.id} reviewCount={reviewCount} currentUser={me} />
+
+      <footer className="rounded-2xl border border-border bg-surface/70 px-4 py-3 text-xs text-text-muted">
+        Data & images from{" "}
+        <Link href={`https://rawg.io/games/${game.slug}`} className="text-primary underline-offset-2 hover:underline" target="_blank">
+          RAWG
+        </Link>
+      </footer>
     </div>
   );
 }

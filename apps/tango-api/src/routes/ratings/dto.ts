@@ -1,17 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsNumber, IsUUID, Max, Min } from 'class-validator';
+import { IsInt, Max, Min } from 'class-validator';
 
-export class UpsertRatingDto {
-  @ApiProperty({ format: 'uuid' })
-  @IsUUID()
-  gameId: string;
-
-  @ApiProperty({ minimum: 0.5, maximum: 5.0, example: 4.5 })
+export class UpdateRatingDto {
+  @ApiProperty({ minimum: 0, maximum: 5, example: 4 })
   @Transform(({ value }) => Number(value))
-  @IsNumber()
-  @Min(0.5)
-  @Max(5.0)
-  score: number;
+  @IsInt()
+  @Min(0)
+  @Max(5)
+  value!: number;
 }
-

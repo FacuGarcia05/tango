@@ -1,55 +1,56 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional, IsString, IsUUID, Max, Min, MinLength } from 'class-validator';
+﻿import { Type } from "class-transformer";
+import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator";
 
-export class CreateReviewDto {
-  @ApiProperty({ format: 'uuid' })
-  @IsUUID()
-  gameId: string;
-
-  @ApiPropertyOptional({ example: 'Mi reseña' })
+export class ListReviewsQueryDto {
   @IsOptional()
-  @IsString()
-  title?: string;
+  @Type(() => Number)
+  @IsInt()
+  take?: number;
 
-  @ApiProperty({ minLength: 10, example: 'Texto de al menos 10 caracteres' })
-  @IsString()
-  @MinLength(10)
-  body: string;
-
-  @ApiProperty({ type: Boolean, example: false })
-  @IsBoolean()
-  hasSpoilers: boolean;
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  skip?: number;
 }
 
-export class UpdateReviewDto {
-  @ApiPropertyOptional({ example: 'Título editado' })
+export class CreateReviewDto {
+  @IsUUID()
+  gameId!: string;
+
   @IsOptional()
   @IsString()
-  title?: string;
+  @MaxLength(120)
+  title?: string | null;
 
-  @ApiPropertyOptional({ minLength: 10 })
-  @IsOptional()
   @IsString()
   @MinLength(10)
-  body?: string;
+  @MaxLength(3000)
+  body!: string;
 
-  @ApiPropertyOptional({ type: Boolean })
   @IsOptional()
   @IsBoolean()
   hasSpoilers?: boolean;
 }
 
-export class ListReviewsQueryDto {
-  @ApiProperty({ required: false, default: 20, maximum: 50 })
-  @Transform(({ value }) => Number(value))
-  @Min(0)
-  @Max(50)
-  take?: number = 20;
+export class UpdateReviewDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  title?: string | null;
 
-  @ApiProperty({ required: false, default: 0 })
-  @Transform(({ value }) => Number(value))
-  @Min(0)
-  skip?: number = 0;
+  @IsOptional()
+  @IsString()
+  @MaxLength(3000)
+  body?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  hasSpoilers?: boolean;
 }
 
+export class CreateCommentDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  body!: string;
+}

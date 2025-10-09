@@ -1,4 +1,4 @@
-﻿export const API = process.env.NEXT_PUBLIC_API_BASE!;
+export const API = process.env.NEXT_PUBLIC_API_BASE ?? "";
 
 export class ApiError<T = unknown> extends Error {
   status: number;
@@ -46,6 +46,10 @@ function isServer() {
   return typeof window === "undefined";
 }
 
+function isFormData(body: BodyInit | null | undefined): body is FormData {
+  return typeof FormData !== "undefined" && body instanceof FormData;
+}
+
 async function getCookieHeader(): Promise<string | null> {
   if (!isServer()) {
     return null;
@@ -63,8 +67,9 @@ async function getCookieHeader(): Promise<string | null> {
 }
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const needsJson = init.body !== undefined && !isFormData(init.body);
   const headers = mergeHeaders(
-    { "Content-Type": "application/json" },
+    needsJson ? { "Content-Type": "application/json" } : undefined,
     init.headers as HeadersInit | undefined
   );
 

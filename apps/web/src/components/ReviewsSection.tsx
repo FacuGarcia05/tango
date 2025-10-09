@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ApiError, api } from "@/lib/api";
-import type { PaginatedReviews, Review, User } from "@/types";
-import { ReviewModal } from "@/components/ReviewModal";
+import type { PaginatedReviews, Review, ReviewStats, User } from "@/types";
+import { ReviewItem } from "./ReviewItem";
+import { ReviewModal } from "./ReviewModal";
 
 interface ReviewsSectionProps {
   slug: string;
@@ -25,7 +26,6 @@ export function ReviewsSection({ slug, gameId, reviewCount, currentUser }: Revie
   const [hasUserReview, setHasUserReview] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const [revealedSpoilers, setRevealedSpoilers] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setTotal(reviewCount);
@@ -50,9 +50,9 @@ export function ReviewsSection({ slug, gameId, reviewCount, currentUser }: Revie
         }
       } catch (err) {
         if (cancelled) return;
-        if (err instanceof ApiError && (err.status === 401 || err.status === 404)) {
+        if (err instanceof ApiError && err.status === 401) {
           setHasUserReview(false);
-        } else if (!(err instanceof ApiError && err.status === 403)) {
+        } else if (!(err instanceof ApiError && err.status === 404)) {
           console.warn("No se pudo verificar si el usuario tiene resenas", err);
         }
       }
@@ -65,9 +65,7 @@ export function ReviewsSection({ slug, gameId, reviewCount, currentUser }: Revie
   }, [currentUser?.id, gameId, refreshNonce]);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
 
     let cancelled = false;
     const controller = new AbortController();
@@ -75,23 +73,18 @@ export function ReviewsSection({ slug, gameId, reviewCount, currentUser }: Revie
     (async () => {
       setLoading(true);
       setError(null);
+      const skip = (page - 1) * PAGE_SIZE;
       try {
-        const skip = (page - 1) * PAGE_SIZE;
-        const response = await api<PaginatedReviews>(
-          `/games/${slug}/reviews?take=${PAGE_SIZE}&skip=${skip}`,
-          { signal: controller.signal },
-        );
+        const response = await api<PaginatedReviews>(`/games/${slug}/reviews?take=${PAGE_SIZE}&skip=${skip}`);
         if (!cancelled) {
           setReviews(response.items);
           setTotal(response.total);
         }
       } catch (err) {
         if (cancelled) return;
-        if (err instanceof ApiError) {
-          setError(err.message || "No se pudieron cargar las resenas");
-        } else {
-          setError("No se pudieron cargar las resenas");
-        }
+        const message =
+          err instanceof ApiError ? err.message || "No se pudieron cargar las resenas" : "No se pudieron cargar las resenas";
+        setError(message);
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -118,30 +111,38 @@ export function ReviewsSection({ slug, gameId, reviewCount, currentUser }: Revie
   const canPrev = page > 1;
   const canNext = useMemo(() => page * PAGE_SIZE < total, [page, total]);
 
-  const handleRevealSpoiler = useCallback((id: string) => {
-    setRevealedSpoilers((prev) => ({ ...prev, [id]: true }));
-  }, []);
-
   const handleModalSuccess = useCallback(
     (review: Review) => {
       setModalOpen(false);
       setHasUserReview(true);
-      setOpen(true);
-      setPage(1);
       setRefreshNonce((value) => value + 1);
       setTotal((value) => value + 1);
-      setReviews((prev) => [review, ...prev].slice(0, PAGE_SIZE));
+      if (open && page === 1) {
+        setReviews((prev) => [review, ...prev].slice(0, PAGE_SIZE));
+      }
     },
-    [],
+    [open, page]
   );
 
-  const handleModalClose = useCallback(() => {
-    setModalOpen(false);
-  }, []);
-
-  const handleOpenModal = useCallback(() => {
-    setModalOpen(true);
-  }, []);
+  const handleStatsChange = useCallback(
+    (reviewId: string, stats: ReviewStats & { likedByMe: boolean }) => {
+      setReviews((prev) =>
+        prev.map((item) =>
+          item.id === reviewId
+            ? {
+                ...item,
+                stats: {
+                  likes_count: stats.likes_count,
+                  comments_count: stats.comments_count,
+                },
+                likedByMe: stats.likedByMe,
+              }
+            : item
+        )
+      );
+    },
+    []
+  );
 
   return (
     <section className="space-y-4">
@@ -151,7 +152,7 @@ export function ReviewsSection({ slug, gameId, reviewCount, currentUser }: Revie
           {currentUser && !hasUserReview ? (
             <button
               type="button"
-              onClick={handleOpenModal}
+              onClick={() => setModalOpen(true)}
               className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-contrast shadow transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             >
               Escribir resena
@@ -178,47 +179,11 @@ export function ReviewsSection({ slug, gameId, reviewCount, currentUser }: Revie
 
           {!loading && !error && reviews.length > 0 ? (
             <ul className="space-y-4">
-              {reviews.map((review) => {
-                const spoilerHidden = review.has_spoilers && !revealedSpoilers[review.id];
-                return (
-                  <li
-                    key={review.id}
-                    className="rounded-2xl border border-border bg-surface/80 p-5 shadow-sm transition hover:border-primary/60"
-                  >
-                    <div className="flex items-center justify-between text-sm text-text-muted">
-                      <div className="font-semibold text-text">
-                        {review.users?.display_name || "Usuario Tango"}
-                      </div>
-                      <time dateTime={review.created_at}>
-                        {new Date(review.created_at).toLocaleDateString("es-AR", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </time>
-                    </div>
-                    {review.title ? (
-                      <h3 className="mt-2 text-base font-semibold text-text">{review.title}</h3>
-                    ) : null}
-                    <div className="mt-2 text-sm text-text">
-                      {spoilerHidden ? (
-                        <div className="space-y-2">
-                          <p className="font-medium text-amber-400">Esta resena tiene spoilers.</p>
-                          <button
-                            type="button"
-                            onClick={() => handleRevealSpoiler(review.id)}
-                            className="rounded-md border border-amber-400 px-3 py-1 text-sm font-medium text-amber-100 transition hover:bg-amber-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-                          >
-                            Ver spoilers
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="whitespace-pre-line text-text-muted">{review.body}</p>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
+              {reviews.map((review) => (
+                <li key={review.id}>
+                  <ReviewItem review={review} currentUser={currentUser} onStatsChange={handleStatsChange} />
+                </li>
+              ))}
             </ul>
           ) : null}
 
@@ -246,12 +211,7 @@ export function ReviewsSection({ slug, gameId, reviewCount, currentUser }: Revie
         </div>
       ) : null}
 
-      <ReviewModal
-        open={modalOpen}
-        gameId={gameId}
-        onClose={handleModalClose}
-        onCreated={handleModalSuccess}
-      />
+      <ReviewModal open={modalOpen} gameId={gameId} onClose={() => setModalOpen(false)} onCreated={handleModalSuccess} />
     </section>
   );
 }

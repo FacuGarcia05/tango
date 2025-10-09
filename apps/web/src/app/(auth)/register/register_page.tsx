@@ -1,26 +1,26 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 import { ApiError, api } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { refresh } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
     setError(null);
+    setSuccess(null);
 
     try {
       await api("/auth/register", {
@@ -28,8 +28,13 @@ export default function RegisterPage() {
         body: JSON.stringify({ email, password, displayName }),
       });
 
-      await refresh();
-      router.push("/me");
+      setSuccess("Registro exitoso. Te enviamos un email de verificacion.");
+      setEmail("");
+      setPassword("");
+      setDisplayName("");
+      setTimeout(() => {
+        router.push("/login?registered=1");
+      }, 1200);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message || "No se pudo registrar");
@@ -46,10 +51,7 @@ export default function RegisterPage() {
       <h1 className="text-2xl font-semibold tracking-tight text-text">Crear cuenta</h1>
       <p className="mt-2 text-sm text-text-muted">
         Ya tenes cuenta?{" "}
-        <Link
-          href="/login"
-          className="font-medium text-primary underline-offset-4 transition hover:underline"
-        >
+        <Link href="/login" className="font-medium text-primary underline-offset-4 transition hover:underline">
           Ingresar
         </Link>
       </p>
@@ -68,6 +70,7 @@ export default function RegisterPage() {
             onChange={(event) => setDisplayName(event.target.value)}
             className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-slate-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60"
             placeholder="Tu nombre publico"
+            minLength={3}
           />
         </div>
 
@@ -99,11 +102,13 @@ export default function RegisterPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-slate-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60"
-            placeholder="Minimo 8 caracteres"
+            placeholder="Minimo 6 caracteres"
+            minLength={6}
           />
         </div>
 
         {error ? <p className="text-sm text-danger">{error}</p> : null}
+        {success ? <p className="text-sm text-success">{success}</p> : null}
 
         <button
           type="submit"

@@ -1,22 +1,34 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Put, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiCookieAuth, ApiTags } from '@nestjs/swagger';
+
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { UpsertRatingDto } from './dto';
+import { UpdateRatingDto } from './dto';
 import { RatingsService } from './ratings.service';
 
 @ApiTags('Ratings')
-@Controller('ratings')
+@Controller('games')
 export class RatingsController {
   constructor(private service: RatingsService) {}
 
-  @Post()
+  @Put(':slug/ratings')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiCookieAuth('access_token')
   @HttpCode(HttpStatus.OK)
-  upsert(@CurrentUser() user: any, @Body() dto: UpsertRatingDto) {
-    return this.service.upsert(user.sub, dto);
+  upsert(
+    @CurrentUser() user: any,
+    @Param('slug') slug: string,
+    @Body() dto: UpdateRatingDto,
+  ) {
+    return this.service.upsertBySlug(user.sub, slug, dto);
+  }
+
+  @Get(':slug/ratings/me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiCookieAuth('access_token')
+  mine(@CurrentUser() user: any, @Param('slug') slug: string) {
+    return this.service.findMineBySlug(user.sub, slug);
   }
 }
-
