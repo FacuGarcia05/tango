@@ -3,23 +3,29 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { ApiError, api } from "@/lib/api";
-import { ProfileEditorModal } from "@/components/ProfileEditorModal";
-import { UserReviewItem } from "@/components/UserReviewItem";
 import { LogoutButton } from "@/components/LogoutButton";
+import { ProfileEditorModal } from "@/components/ProfileEditorModal";
+import { ProfileSearch } from "@/components/ProfileSearch";
+import { ReviewItem } from "@/components/ReviewItem";
 import { useAuth } from "@/context/AuthContext";
-import type { PaginatedReviews, Review, User } from "@/types";
+import { ApiError, api } from "@/lib/api";
+import type { PaginatedReviews, Review, UserSummary } from "@/types";
 
 const PAGE_SIZE = 5;
 
+type ProfileTab = "activity" | "reviews" | "ratings";
+
 export function ProfileContent() {
-  const { user, loading, refresh, setUser } = useAuth();
+  const { user, loading, refresh, setUser, isVerified } = useAuth();
   const [editorOpen, setEditorOpen] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
+  const [tab, setTab] = useState<ProfileTab>("activity");
+  const [summary, setSummary] = useState<UserSummary | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
 
   const initials = useMemo(() => {
     if (!user) return "?";
@@ -27,8 +33,21 @@ export function ProfileContent() {
     return source.trim().charAt(0).toUpperCase() || "?";
   }, [user]);
 
-  const backdropUrl = user?.backdropUrl ?? null;
-  const avatarUrl = user?.avatarUrl ?? null;
+  const backdropUrl = summary?.profile.backdropUrl ?? user?.backdropUrl ?? null;
+  const avatarUrl = summary?.profile.avatarUrl ?? user?.avatarUrl ?? null;
+
+  const loadSummary = useCallback(async () => {
+    if (!user) return;
+    setSummaryError(null);
+    try {
+      const response = await api<UserSummary>(`/users/${user.id}/summary`);
+      setSummary(response);
+    } catch (err) {
+      const message =
+        err instanceof ApiError ? err.message || "No se pudo cargar tu resumen" : "No se pudo cargar tu resumen";
+      setSummaryError(message);
+    }
+  }, [user]);
 
   const loadReviews = useCallback(
     async (targetPage: number) => {
@@ -37,38 +56,39 @@ export function ProfileContent() {
       setReviewsError(null);
       const skip = (targetPage - 1) * PAGE_SIZE;
       try {
-        const response = await api<PaginatedReviews>(`/users/me/reviews?take=${PAGE_SIZE}&skip=${skip}`);
+        const response = await api<PaginatedReviews>(`/users/${user.id}/reviews?take=${PAGE_SIZE}&skip=${skip}`);
         setReviews(response.items);
         setTotal(response.total);
       } catch (err) {
-        if (err instanceof ApiError) {
-          setReviewsError(err.message || "No se pudieron cargar tus reseñas");
-        } else if (err instanceof Error) {
-          setReviewsError(err.message);
-        } else {
-          setReviewsError("No se pudieron cargar tus reseñas");
-        }
+        const message =
+          err instanceof ApiError ? err.message || "No se pudieron cargar tus resenas" : "No se pudieron cargar tus resenas";
+        setReviewsError(message);
       } finally {
         setReviewsLoading(false);
       }
     },
-    [user],
+    [user]
   );
 
   useEffect(() => {
     if (!user) return;
+    loadSummary();
+  }, [loadSummary, user]);
+
+  useEffect(() => {
+    if (!user || tab !== "reviews") return;
     loadReviews(page);
-  }, [user, page, loadReviews]);
+  }, [loadReviews, page, tab, user]);
 
   const handleOpenEditor = () => setEditorOpen(true);
   const handleCloseEditor = () => setEditorOpen(false);
 
   const handleProfileUpdated = useCallback(
-    async (nextUser: User) => {
+    (nextUser: any) => {
       setUser(nextUser);
-      await refresh();
+      loadSummary();
     },
-    [refresh, setUser],
+    [loadSummary, setUser]
   );
 
   const canPrev = page > 1;
@@ -86,17 +106,108 @@ export function ProfileContent() {
     return (
       <section className="space-y-6 rounded-3xl border border-border bg-surface/90 p-8 shadow-xl">
         <p className="text-sm text-danger">No se pudo cargar tu perfil.</p>
+        <button
+          type="button"
+          className="rounded-md border border-border px-4 py-2 text-sm font-semibold text-text"
+          onClick={refresh}
+        >
+          Reintentar
+        </button>
       </section>
     );
   }
 
+  const verificationBanner = !isVerified ? (
+    <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
+      Aun no verificaste tu email. Revisa tu bandeja o reenvia el enlace desde el login.
+    </div>
+  ) : null;
+
+  const activityStats = summary
+    ? [
+        { label: "Seguidores", value: summary.followers },
+        { label: "Siguiendo", value: summary.following },
+        { label: "Resenas", value: summary.reviewsCount },
+        { label: "Calificaciones", value: summary.ratingsCount },
+      ]
+    : [];
+
+  const renderTab = () => {
+    if (tab === "activity") {
+      return (
+        <div className="space-y-4">
+          {summaryError ? <p className="text-sm text-danger">{summaryError}</p> : null}
+          {verificationBanner}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {activityStats.map((item) => (
+              <div key={item.label} className="rounded-2xl border border-border/60 bg-bg/70 p-4 text-sm text-text-muted">
+                <p className="text-xs uppercase tracking-wide">{item.label}</p>
+                <p className="mt-1 text-2xl font-bold text-text">{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (tab === "reviews") {
+      return (
+        <div className="space-y-4">
+          {reviewsLoading ? <p className="text-sm text-text-muted">Cargando resenas...</p> : null}
+          {reviewsError ? <p className="text-sm text-danger">{reviewsError}</p> : null}
+
+          {!reviewsLoading && !reviewsError && reviews.length === 0 ? (
+            <p className="text-sm text-text-muted">Todavia no escribiste resenas.</p>
+          ) : null}
+
+          <div className="space-y-4">
+            {reviews.map((review) => (
+              <ReviewItem key={review.id} review={review} currentUser={user} showGameMeta />
+            ))}
+          </div>
+
+          {total > PAGE_SIZE ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                disabled={!canPrev || reviewsLoading}
+                className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span className="text-sm text-text-muted">Pagina {page}</span>
+              <button
+                type="button"
+                onClick={() => canNext && setPage((prev) => prev + 1)}
+                disabled={!canNext || reviewsLoading}
+                className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
+    return (
+      <div className="rounded-2xl border border-border bg-surface/80 p-4 text-sm text-text-muted">
+        Tus calificaciones apareceran aca pronto. Visita una pagina de juego para agregar o editar tu rating.
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8">
       <section className="overflow-hidden rounded-3xl border border-border shadow-xl">
+        {!isVerified ? (
+          <div className="border-b border-warning/40 bg-warning/10 px-6 py-3 text-sm text-warning">
+            Aun no verificaste tu email. Revisa tu bandeja o reenvia el enlace desde el login.
+          </div>
+        ) : null}
         <div className="relative h-64 w-full bg-gradient-to-r from-primary/30 via-primary/10 to-transparent">
-          {backdropUrl ? (
-            <Image src={backdropUrl} alt="Backdrop" fill className="object-cover" />
-          ) : null}
+          {backdropUrl ? <Image src={backdropUrl} alt="Backdrop" fill className="object-cover" /> : null}
           <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/40 to-transparent" />
         </div>
         <div className="relative px-6 pb-6 sm:px-10">
@@ -113,10 +224,17 @@ export function ProfileContent() {
             <div className="flex-1 space-y-2">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-text">
-                    {user.displayName || user.email}
-                  </h1>
+                  <h1 className="text-3xl font-bold tracking-tight text-text">{user.displayName || user.email}</h1>
                   <p className="text-sm text-text-muted">{user.email}</p>
+                  {isVerified ? (
+                    <span className="mt-1 inline-flex items-center gap-2 rounded-full border border-success/40 bg-success/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-success">
+                      Email verificado
+                    </span>
+                  ) : (
+                    <span className="mt-1 inline-flex items-center gap-2 rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning">
+                      Email pendiente de verificacion
+                    </span>
+                  )}
                 </div>
                 <div className="flex gap-3">
                   <button
@@ -129,8 +247,8 @@ export function ProfileContent() {
                   <LogoutButton />
                 </div>
               </div>
-              {user.bio ? (
-                <p className="max-w-3xl text-sm text-text-muted">{user.bio}</p>
+              {summary?.profile.bio ? (
+                <p className="max-w-3xl text-sm text-text-muted">{summary.profile.bio}</p>
               ) : (
                 <p className="text-sm text-text-muted">Agrega una bio para contar tus gustos y juegos favoritos.</p>
               )}
@@ -139,47 +257,40 @@ export function ProfileContent() {
         </div>
       </section>
 
+      <ProfileSearch currentUser={user} />
+
       <section className="space-y-4">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-semibold text-text">Mis reseñas</h2>
-            <p className="text-sm text-text-muted">
-              {total === 0 ? "Todavía no escribiste reseñas" : `${total} reseñas publicadas`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              disabled={!canPrev || reviewsLoading}
-              className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Anterior
-            </button>
-            <span className="text-sm text-text-muted">Página {page}</span>
-            <button
-              type="button"
-              onClick={() => canNext && setPage((prev) => prev + 1)}
-              disabled={!canNext || reviewsLoading}
-              className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Siguiente
-            </button>
-          </div>
-        </header>
-
-        {reviewsLoading ? <p className="text-sm text-text-muted">Cargando reseñas...</p> : null}
-        {reviewsError ? <p className="text-sm text-danger">{reviewsError}</p> : null}
-
-        {!reviewsLoading && !reviewsError && reviews.length === 0 ? (
-          <p className="text-sm text-text-muted">Cuando publiques reseñas aparecerán acá.</p>
-        ) : null}
-
-        <div className="space-y-4">
-          {reviews.map((review) => (
-            <UserReviewItem key={review.id} review={review} />
-          ))}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setTab("activity")}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+              tab === "activity" ? "bg-primary text-primary-contrast" : "bg-border text-text"
+            }`}
+          >
+            Actividad
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("reviews")}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+              tab === "reviews" ? "bg-primary text-primary-contrast" : "bg-border text-text"
+            }`}
+          >
+            Resenas
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("ratings")}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+              tab === "ratings" ? "bg-primary text-primary-contrast" : "bg-border text-text"
+            }`}
+          >
+            Calificaciones
+          </button>
         </div>
+
+        {renderTab()}
       </section>
 
       <ProfileEditorModal
@@ -188,9 +299,9 @@ export function ProfileContent() {
         onUpdated={handleProfileUpdated}
         initialValues={{
           displayName: user.displayName,
-          bio: user.bio ?? null,
-          avatarUrl: user.avatarUrl ?? null,
-          backdropUrl: user.backdropUrl ?? null,
+          bio: summary?.profile.bio ?? user.bio ?? null,
+          avatarUrl: summary?.profile.avatarUrl ?? user.avatarUrl ?? null,
+          backdropUrl: summary?.profile.backdropUrl ?? user.backdropUrl ?? null,
         }}
       />
     </div>

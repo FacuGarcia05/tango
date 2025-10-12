@@ -1,4 +1,4 @@
-﻿import {
+import {
   Body,
   Controller,
   Delete,
@@ -6,6 +6,7 @@
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -14,8 +15,9 @@
 import { ApiBearerAuth, ApiCookieAuth, ApiTags } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { JwtOptionalAuthGuard } from '../auth/jwt-optional.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { CreateReviewDto, ListReviewsQueryDto, UpdateReviewDto } from './dto';
+import { CreateCommentDto, CreateReviewDto, ListReviewsQueryDto, UpdateReviewDto } from './dto';
 import { ReviewsService } from './reviews.service';
 
 @ApiTags('Reviews')
@@ -28,12 +30,17 @@ export class ReviewsController {
   @ApiBearerAuth()
   @ApiCookieAuth('access_token')
   listMine(@CurrentUser() user: any, @Query() q: ListReviewsQueryDto) {
-    return this.service.listByUser(user.sub, q.take ?? 20, q.skip ?? 0);
+    return this.service.listByUser(user.sub, q.take ?? 20, q.skip ?? 0, user.sub);
   }
 
   @Get('users/:id/reviews')
-  listByUser(@Param('id') id: string, @Query() q: ListReviewsQueryDto) {
-    return this.service.listByUser(id, q.take ?? 20, q.skip ?? 0);
+  @UseGuards(JwtOptionalAuthGuard)
+  listByUser(
+    @CurrentUser() user: any,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query() q: ListReviewsQueryDto,
+  ) {
+    return this.service.listByUser(id, q.take ?? 20, q.skip ?? 0, user?.sub);
   }
 
   @Post('reviews')
@@ -45,15 +52,20 @@ export class ReviewsController {
   }
 
   @Get('games/:slug/reviews')
-  listByGame(@Param('slug') slug: string, @Query() q: ListReviewsQueryDto) {
-    return this.service.listByGameSlug(slug, q.take ?? 20, q.skip ?? 0);
+  @UseGuards(JwtOptionalAuthGuard)
+  listByGame(
+    @CurrentUser() user: any,
+    @Param('slug') slug: string,
+    @Query() q: ListReviewsQueryDto,
+  ) {
+    return this.service.listByGameSlug(slug, q.take ?? 20, q.skip ?? 0, user?.sub);
   }
 
   @Get('reviews/me/:gameId/exists')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiCookieAuth('access_token')
-  reviewExists(@CurrentUser() user: any, @Param('gameId') gameId: string) {
+  reviewExists(@CurrentUser() user: any, @Param('gameId', new ParseUUIDPipe()) gameId: string) {
     return this.service.userHasReview(user.sub, gameId);
   }
 
@@ -61,7 +73,11 @@ export class ReviewsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiCookieAuth('access_token')
-  update(@CurrentUser() user: any, @Param('id') id: string, @Body() dto: UpdateReviewDto) {
+  update(
+    @CurrentUser() user: any,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdateReviewDto,
+  ) {
     return this.service.update(user.sub, id, dto);
   }
 
@@ -70,7 +86,7 @@ export class ReviewsController {
   @ApiBearerAuth()
   @ApiCookieAuth('access_token')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@CurrentUser() user: any, @Param('id') id: string) {
+  async remove(@CurrentUser() user: any, @Param('id', new ParseUUIDPipe()) id: string) {
     await this.service.softDelete(user.sub, id);
   }
 
@@ -78,17 +94,37 @@ export class ReviewsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiCookieAuth('access_token')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async like(@CurrentUser() user: any, @Param('id') id: string) {
-    await this.service.like(user.sub, id);
+  toggleLike(@CurrentUser() user: any, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.service.toggleLike(user.sub, id);
   }
 
-  @Delete('reviews/:id/like')
+  @Get('reviews/:id/comments')
+  listComments(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.service.listComments(id);
+  }
+
+  @Post('reviews/:id/comments')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiCookieAuth('access_token')
+  createComment(
+    @CurrentUser() user: any,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: CreateCommentDto,
+  ) {
+    return this.service.createComment(user.sub, id, dto);
+  }
+
+  @Delete('reviews/:id/comments/:commentId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiCookieAuth('access_token')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async unlike(@CurrentUser() user: any, @Param('id') id: string) {
-    await this.service.unlike(user.sub, id);
+  async deleteComment(
+    @CurrentUser() user: any,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('commentId', new ParseUUIDPipe()) commentId: string,
+  ) {
+    await this.service.deleteComment(user.sub, id, commentId);
   }
 }

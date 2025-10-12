@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+
 import { ApiError, api } from "@/lib/api";
 import type { User } from "@/types";
 
@@ -10,6 +11,7 @@ interface AuthContextValue {
   error: string | null;
   refresh: () => Promise<void>;
   setUser: (user: User | null) => void;
+  isVerified: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -41,9 +43,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refresh();
   }, [refresh]);
 
+  const memoSetUser = useCallback((next: User | null) => {
+    setUser(next);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user, loading, error, refresh, setUser }),
-    [user, loading, error, refresh]
+    () => ({
+      user,
+      loading,
+      error,
+      refresh,
+      setUser: memoSetUser,
+      isVerified: Boolean(user?.emailVerifiedAt),
+    }),
+    [user, loading, error, refresh, memoSetUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

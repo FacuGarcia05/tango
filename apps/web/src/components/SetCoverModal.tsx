@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
@@ -13,39 +13,41 @@ interface SetCoverModalProps {
 export function SetCoverModal({ slug, currentCover = "" }: SetCoverModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [url, setUrl] = useState(currentCover);
+  const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!open) {
-      setUrl(currentCover);
+      setFile(null);
       setError(null);
       setLoading(false);
     }
-  }, [open, currentCover]);
+  }, [open]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
-
-    const trimmed = url.trim();
-    if (!/^https?:\/\//i.test(trimmed)) {
-      setError("Ingresa una URL valida que comience con http o https");
+    if (!file) {
+      setError("Selecciona una imagen antes de guardar");
       return;
     }
 
     setLoading(true);
+    setError(null);
     try {
+      const form = new FormData();
+      form.append("file", file);
       await api(`/games/${slug}/cover`, {
-        method: "PUT",
-        body: JSON.stringify({ url: trimmed }),
+        method: "POST",
+        body: form,
       });
       setOpen(false);
       router.refresh();
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message || "No se pudo actualizar la portada");
+      } else if (err instanceof Error) {
+        setError(err.message);
       } else {
         setError("No se pudo actualizar la portada");
       }
@@ -61,7 +63,7 @@ export function SetCoverModal({ slug, currentCover = "" }: SetCoverModalProps) {
         onClick={() => setOpen(true)}
         className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-contrast shadow transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
       >
-        Establecer portada por URL
+        Subir nueva portada
       </button>
 
       {open ? (
@@ -70,7 +72,7 @@ export function SetCoverModal({ slug, currentCover = "" }: SetCoverModalProps) {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold text-text">Actualizar portada</h3>
-                <p className="text-sm text-text-muted">Pega la URL de una imagen (2:3 recomendado).</p>
+                <p className="text-sm text-text-muted">Elegi una imagen 2:3. Tamano maximo 5MB.</p>
               </div>
               <button
                 type="button"
@@ -85,21 +87,20 @@ export function SetCoverModal({ slug, currentCover = "" }: SetCoverModalProps) {
 
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               <div>
-                <label htmlFor="cover-url" className="block text-sm font-medium text-text">
-                  URL de portada
+                <label htmlFor="cover-file" className="block text-sm font-medium text-text">
+                  Archivo de imagen
                 </label>
                 <input
-                  id="cover-url"
-                  type="url"
-                  value={url}
-                  onChange={(event) => setUrl(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-slate-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/60"
-                  placeholder="https://..."
+                  id="cover-file"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                  className="mt-1 w-full text-sm text-text file:mr-3 file:rounded-md file:border file:border-border file:bg-surface file:px-3 file:py-2 file:text-xs file:font-medium file:text-text hover:file:border-primary hover:file:text-primary"
                   disabled={loading}
-                  required
                 />
               </div>
 
+              {currentCover ? <p className="text-xs text-text-muted">Portada actual: {currentCover}</p> : null}
               {error ? <p className="text-sm text-danger">{error}</p> : null}
 
               <div className="flex justify-end gap-3">
@@ -126,3 +127,4 @@ export function SetCoverModal({ slug, currentCover = "" }: SetCoverModalProps) {
     </>
   );
 }
+

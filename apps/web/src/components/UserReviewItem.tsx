@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -33,10 +33,10 @@ export function UserReviewItem({ review }: UserReviewItemProps) {
   const cover = game?.cover_url ?? FALLBACK_COVER;
   const body = review.body?.trim() ?? "";
   const shouldTruncate = body.length > EXCERPT_LENGTH;
-  const excerpt = expanded || !shouldTruncate ? body : `${body.slice(0, EXCERPT_LENGTH).trimEnd()}…`;
+  const excerpt = expanded || !shouldTruncate ? body : `${body.slice(0, EXCERPT_LENGTH).trimEnd()}...`;
 
   return (
-    <article className="flex flex-col gap-4 rounded-2xl border border-border bg-surface/80 p-5 shadow-sm transition hover:border-primary/50">
+    <article className="flex flex-col gap-4 rounded-2xl border border-border bg-surface/80 p-5 shadow-sm transition hover:border-primary/40">
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="relative h-32 w-24 shrink-0 overflow-hidden rounded-xl border border-border">
           <Image src={cover} alt={game?.title ?? "Juego"} fill sizes="96px" className="object-cover" />
@@ -56,7 +56,7 @@ export function UserReviewItem({ review }: UserReviewItemProps) {
               )}
               <p className="text-xs uppercase tracking-wide text-text-muted">Publicado el {createdAt}</p>
             </div>
-            {review.likes ? (
+            {review.stats?.likes_count ? (
               <span className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-semibold text-text-muted">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -67,14 +67,14 @@ export function UserReviewItem({ review }: UserReviewItemProps) {
                 >
                   <path d="M12 21.35 10.55 20C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54Z" />
                 </svg>
-                {review.likes}
+                {review.stats.likes_count}
               </span>
             ) : null}
           </div>
 
           {review.has_spoilers && !showSpoilers ? (
             <div className="rounded-xl border border-amber-400/60 bg-amber-500/10 p-3 text-sm text-amber-100">
-              <p className="font-semibold">Esta reseña contiene spoilers.</p>
+              <p className="font-semibold">Esta resena contiene spoilers.</p>
               <button
                 type="button"
                 onClick={() => setShowSpoilers(true)}
@@ -93,7 +93,7 @@ export function UserReviewItem({ review }: UserReviewItemProps) {
               onClick={() => setExpanded((value) => !value)}
               className="text-xs font-semibold text-primary transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             >
-              {expanded ? "Ver menos" : "Ver más"}
+              {expanded ? "Ver menos" : "Ver mas"}
             </button>
           ) : null}
         </div>

@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -16,7 +16,7 @@ const navLinks = [
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading, refresh, setUser } = useAuth();
+  const { user, loading, refresh, setUser, isVerified } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const initials = useMemo(() => {
@@ -42,16 +42,20 @@ export default function Navbar() {
 
   const renderAuthActions = () => {
     if (loading) {
-      return <span className="text-sm text-text-muted">Verificando sesión...</span>;
+      return <span className="text-sm text-text-muted">Verificando sesion...</span>;
     }
 
     if (user) {
       return (
         <div className="flex items-center gap-3">
-          <span className="hidden text-sm font-medium text-text-muted sm:inline">
-            {user.displayName || user.email}
-          </span>
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-medium text-text-muted">{user.displayName || user.email}</span>
+            {!isVerified ? (
+              <span className="text-xs font-semibold uppercase tracking-wide text-danger">Email sin verificar</span>
+            ) : null}
+          </div>
           <button
+            type="button"
             onClick={handleLogout}
             className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-contrast shadow transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isLoggingOut}
@@ -131,3 +135,4 @@ export default function Navbar() {
     </nav>
   );
 }
+

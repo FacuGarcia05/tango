@@ -12,7 +12,7 @@ import { Pagination } from "@/components/Pagination";
 import type { DurationFilter, GamesFilters } from "./types";
 
 const DEFAULT_GENRES: Taxonomy[] = [
-  { slug: "action", name: "Acción" },
+  { slug: "action", name: "Accion" },
   { slug: "rpg", name: "RPG" },
   { slug: "indie", name: "Indie" },
   { slug: "adventure", name: "Aventura" },
@@ -232,7 +232,7 @@ export default function GamesPage() {
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        console.warn("Fallo al cargar taxonomías", err);
+        console.warn("Fallo al cargar taxonomias", err);
       }
     };
 
@@ -293,11 +293,11 @@ export default function GamesPage() {
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (err instanceof ApiError) {
-          setError(err.message || "No se pudo cargar el catálogo");
+          setError(err.message || "No se pudo cargar el catalogo");
         } else if (err instanceof Error) {
           setError(err.message);
         } else {
-          setError("No se pudo cargar el catálogo");
+          setError("No se pudo cargar el catalogo");
         }
       } finally {
         if (active) {
@@ -362,7 +362,7 @@ export default function GamesPage() {
 
       <section className="space-y-4">
         {loading && (
-          <p className="text-sm text-text-muted">Cargando catálogo...</p>
+          <p className="text-sm text-text-muted">Cargando catalogo...</p>
         )}
 
         {!loading && games.length === 0 && !error ? (
@@ -388,6 +388,7 @@ export default function GamesPage() {
     </div>
   );
 }
+
 
 
 
