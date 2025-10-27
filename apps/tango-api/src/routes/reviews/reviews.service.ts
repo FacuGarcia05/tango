@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
+import { ActivityService } from '../../common/activity/activity.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCommentDto, CreateReviewDto, UpdateReviewDto } from './dto';
 
@@ -31,18 +32,21 @@ interface ReviewStatsMap {
 
 @Injectable()
 export class ReviewsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private activity: ActivityService,
+  ) {}
 
   async create(userId: string, dto: CreateReviewDto) {
     const game = await this.prisma.games.findUnique({
       where: { id: dto.gameId },
-      select: { id: true },
+      select: { id: true, slug: true, title: true },
     });
     if (!game) {
       throw new NotFoundException('Juego no encontrado');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const review = await this.prisma.$transaction(async (tx) => {
       const exists = await tx.reviews.findFirst({
         where: { user_id: userId, game_id: dto.gameId, is_deleted: false },
         select: { id: true },
@@ -65,6 +69,21 @@ export class ReviewsService {
 
       return review;
     });
+
+    await this.activity.recordActivity({
+      actorId: userId,
+      verb: 'review:create',
+      objectType: 'review',
+      objectId: review.id,
+      metadata: {
+        game_id: game.id,
+        game_slug: game.slug,
+        game_title: game.title,
+        review_title: review.title,
+      },
+    });
+
+    return review;
   }
 
   async listByGameSlug(slug: string, take: number, skip: number, viewerId?: string) {

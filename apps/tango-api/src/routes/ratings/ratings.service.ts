@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
+import { ActivityService } from '../../common/activity/activity.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateRatingDto } from './dto';
 
@@ -11,10 +12,16 @@ interface RatingStats {
 
 @Injectable()
 export class RatingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private activity: ActivityService,
+  ) {}
 
   async upsertBySlug(userId: string, slug: string, dto: UpdateRatingDto) {
-    const game = await this.prisma.games.findUnique({ where: { slug }, select: { id: true } });
+    const game = await this.prisma.games.findUnique({
+      where: { slug },
+      select: { id: true, slug: true, title: true },
+    });
     if (!game) {
       throw new NotFoundException('Juego no encontrado');
     }
@@ -31,10 +38,26 @@ export class RatingsService {
       return {
         value: Number(rating.score),
         ...stats,
+        ratingId: rating.id,
       };
     });
 
-    return result;
+    await this.activity.recordActivity({
+      actorId: userId,
+      verb: 'rating:update',
+      objectType: 'rating',
+      objectId: result.ratingId,
+      metadata: {
+        game_id: game.id,
+        game_slug: game.slug,
+        game_title: game.title,
+        score: result.value,
+      },
+    });
+
+    const { ratingId, ...payload } = result;
+
+    return payload;
   }
 
   async findMineBySlug(userId: string, slug: string) {
