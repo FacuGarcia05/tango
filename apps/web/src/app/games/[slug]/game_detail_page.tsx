@@ -7,7 +7,35 @@ import { GameRatingPanel } from "@/components/GameRatingPanel";
 import { ReviewsSection } from "@/components/ReviewsSection";
 import { SetCoverModal } from "@/components/SetCoverModal";
 import { ApiError, apiServer } from "@/lib/api";
+import { GamePriceDisplay } from "@/components/GamePriceDisplay";
 import type { Game, GameDetail, Taxonomy, User } from "@/types";
+
+async function fetchGamePrice(title: string, currency: string) {
+  try {
+    const response = await fetch(
+      `http://localhost:3001/api/soap/convert-with-price?title=${encodeURIComponent(
+        title
+      )}&currency=${currency}`,
+      { cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      console.error("Error fetching price:", response.statusText);
+      return null;
+    }
+
+    const data = await response.json();
+    if (data.error) {
+      console.warn("API returned error:", data.error);
+      return null;
+    }
+
+    return data.convertedPrice; // cadena con el precio convertido
+  } catch (err) {
+    console.error("Error fetching price:", err);
+    return null;
+  }
+}
 
 const FALLBACK_COVER = "/placeholder-cover.svg";
 
@@ -34,7 +62,11 @@ function formatDuration(hours?: number | null) {
   return `${Math.round(hours)} h`;
 }
 
-export default async function GameDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function GameDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   let game: GameDetail | null = null;
 
@@ -46,6 +78,8 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
     }
     throw error;
   }
+
+  const convertedPrice = await fetchGamePrice(game.title, "ARS");
 
   if (!game) {
     notFound();
@@ -64,7 +98,9 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
 
   let myRating: { value: number | null } | null = null;
   if (me) {
-    myRating = await apiServer<{ value: number | null }>(`/games/${slug}/ratings/me`).catch((error) => {
+    myRating = await apiServer<{ value: number | null }>(
+      `/games/${slug}/ratings/me`
+    ).catch((error) => {
       if (error instanceof ApiError && error.status === 404) {
         return { value: null };
       }
@@ -135,33 +171,62 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
                 Rating: {ratingAvg.toFixed(1)} ({ratingCount})
               </span>
             ) : (
-              <span className="rounded-full border border-border px-3 py-1 text-text-muted">Sin rating</span>
+              <span className="rounded-full border border-border px-3 py-1 text-text-muted">
+                Sin rating
+              </span>
             )}
           </div>
 
           <div className="space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h1 className="text-4xl font-bold tracking-tight text-text">{game.title}</h1>
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h1 className="text-4xl font-bold tracking-tight text-text">
+                      {game.title}
+                    </h1>
+                    {convertedPrice ? (
+                      <span className="text-lg font-semibold text-primary">
+                        💰 {convertedPrice} ARS
+                      </span>
+                    ) : (
+                      <span className="text-sm text-text-muted">
+                        Precio no disponible
+                      </span>
+                    )}
+                  </div>
+                </div>
+
                 <p className="mt-2 text-sm text-text-muted">
-                  {genreEntries.length ? genreEntries.map((genre) => genre.name).join(", ") : "Generos no disponibles"}
+                  {genreEntries.length
+                    ? genreEntries.map((genre) => genre.name).join(", ")
+                    : "Géneros no disponibles"}
                 </p>
               </div>
+
               {me ? (
                 <div className="flex flex-col gap-3">
-                  <SetCoverModal slug={game.slug} currentCover={game.cover_url ?? ""} />
+                  <SetCoverModal
+                    slug={game.slug}
+                    currentCover={game.cover_url ?? ""}
+                  />
                   <GameMediaUpload slug={game.slug} />
                 </div>
               ) : null}
             </div>
 
             {game.description ? (
-              <p className="max-w-3xl whitespace-pre-wrap text-base text-text">{game.description}</p>
+              <p className="max-w-3xl whitespace-pre-wrap text-base text-text">
+                {game.description}
+              </p>
             ) : null}
 
             {platformEntries.length ? (
               <p className="text-sm text-text-muted">
-                Plataformas: <span className="text-text">{platformEntries.map((platform) => platform.name).join(", ")}</span>
+                Plataformas:{" "}
+                <span className="text-text">
+                  {platformEntries.map((platform) => platform.name).join(", ")}
+                </span>
               </p>
             ) : null}
           </div>
@@ -170,7 +235,9 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
 
       {dlcs.length ? (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-text">Contenido adicional</h2>
+          <h2 className="text-xl font-semibold text-text">
+            Contenido adicional
+          </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {dlcs.map((dlc) => (
               <Link
@@ -178,22 +245,42 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
                 href={`/games/${dlc.slug}`}
                 className="rounded-2xl border border-border bg-surface/80 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
               >
-                <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">DLC</div>
-                <div className="mt-2 text-base font-semibold text-text">{dlc.title}</div>
-                <div className="mt-1 text-xs text-text-muted">Lanzamiento: {formatReleaseDate(dlc.release_date)}</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+                  DLC
+                </div>
+                <div className="mt-2 text-base font-semibold text-text">
+                  {dlc.title}
+                </div>
+                <div className="mt-1 text-xs text-text-muted">
+                  Lanzamiento: {formatReleaseDate(dlc.release_date)}
+                </div>
               </Link>
             ))}
           </div>
         </section>
       ) : null}
 
-      <GameRatingPanel slug={game.slug} stats={normalizedStats} initialValue={myRating?.value ?? null} currentUser={me} />
+      <GameRatingPanel
+        slug={game.slug}
+        stats={normalizedStats}
+        initialValue={myRating?.value ?? null}
+        currentUser={me}
+      />
 
-      <ReviewsSection slug={game.slug} gameId={game.id} reviewCount={reviewCount} currentUser={me} />
+      <ReviewsSection
+        slug={game.slug}
+        gameId={game.id}
+        reviewCount={reviewCount}
+        currentUser={me}
+      />
 
       <footer className="rounded-2xl border border-border bg-surface/70 px-4 py-3 text-xs text-text-muted">
         Data & images from{" "}
-        <Link href={`https://rawg.io/games/${game.slug}`} className="text-primary underline-offset-2 hover:underline" target="_blank">
+        <Link
+          href={`https://rawg.io/games/${game.slug}`}
+          className="text-primary underline-offset-2 hover:underline"
+          target="_blank"
+        >
           RAWG
         </Link>
       </footer>
