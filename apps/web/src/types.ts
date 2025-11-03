@@ -137,3 +137,119 @@ export interface RatingMutationResponse {
   rating_avg: number;
   rating_count: number;
 }
+
+export interface ListItemGame {
+  id: string;
+  slug: string;
+  title: string;
+  cover_url?: string | null;
+}
+
+export interface ListItem {
+  id: string;
+  position: number;
+  note?: string | null;
+  created_at?: string;
+  game: ListItemGame;
+}
+
+export interface ListOwner {
+  id: string;
+  display_name: string;
+}
+
+export interface ListSummary {
+  id: string;
+  slug: string;
+  title: string;
+  description?: string | null;
+  is_public: boolean;
+  is_backlog: boolean;
+  created_at?: string;
+  updated_at?: string;
+  items_count: number;
+  items_preview?: ListItem[];
+}
+
+export interface ListDetail extends ListSummary {
+  owner: ListOwner;
+  items: ListItem[];
+}
+
+export interface ListPaginatedResponse {
+  total: number;
+  page: number;
+  take: number;
+  items: ListSummary[];
+}
+
+export interface ToggleBacklogResponse {
+  inBacklog: boolean;
+  count: number;
+}
+
+export type FeedVerb =
+  | "follow"
+  | "review:create"
+  | "rating:update"
+  | "list:create"
+  | "list:add"
+  | "list:reorder"
+  | "list:publish";
+
+export interface FeedActor {
+  id: string;
+  display_name: string;
+  avatar_url?: string | null;
+}
+
+export interface FeedActivityPayload {
+  list?: ListSummary & { is_public: boolean; is_backlog: boolean };
+  game?: ListItemGame;
+  review?: {
+    id: string;
+    title?: string | null;
+    has_spoilers: boolean;
+    excerpt: string;
+  };
+  rating?: { id: string; score: number | string };
+  target?: FeedActor;
+  metadata?: Record<string, unknown>;
+}
+
+export interface FeedActivity {
+  id: string;
+  verb: FeedVerb;
+  created_at: string;
+  actor: FeedActor;
+  object_type?: string | null;
+  object_id?: string | null;
+  metadata?: Record<string, unknown>;
+  payload?: FeedActivityPayload;
+}
+
+export interface FeedResponse {
+  total: number;
+  page: number;
+  take: number;
+  items: FeedActivity[];
+}
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  slug: string;
+  source: string;
+  excerpt: string;
+  cover_url?: string | null;
+  published_at: string;
+  source_url?: string;
+  is_featured?: boolean;
+}
+
+export interface NewsPaginatedResponse {
+  total: number;
+  page: number;
+  take: number;
+  items: NewsItem[];
+}

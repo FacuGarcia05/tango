@@ -8,17 +8,19 @@ datasource db {
 }
 
 model activities {
-  id         String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  user_id    String        @db.Uuid
-  type       activity_type
-  ref_id     String?       @db.Uuid
-  target_id  String?       @db.Uuid
-  metadata   Json?
-  created_at DateTime      @default(now()) @db.Timestamptz(6)
-  users      users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  actor_id       String   @db.Uuid
+  verb           String
+  object_type    String?
+  object_id      String?  @db.Uuid
+  target_user_id String?  @db.Uuid
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  metadata       Json?
+  actor          users    @relation("activities_actor", fields: [actor_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  target_user    users?   @relation("activities_target", fields: [target_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([type])
-  @@index([user_id, created_at(sort: Desc)], map: "activities_user_created_idx")
+  @@index([actor_id, created_at(sort: Desc)], map: "activities_actor_created_idx")
+  @@index([verb], map: "activities_verb_idx")
 }
 
 model comments {
@@ -159,38 +161,59 @@ model genres {
 }
 
 model list_items {
-  list_id  String   @db.Uuid
-  game_id  String   @db.Uuid
-  position Int      @default(1)
-  added_at DateTime @default(now()) @db.Timestamptz(6)
-  games    games    @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  lists    lists    @relation(fields: [list_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  list_id    String    @db.Uuid
+  game_id    String    @db.Uuid
+  position   Int
+  note       String?
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  games      games     @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  lists      lists     @relation(fields: [list_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@id([list_id, game_id])
+  @@unique([list_id, game_id], map: "list_items_list_game_unique")
   @@index([list_id, position], map: "list_items_position_idx")
 }
 
 model lists {
   id          String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   user_id     String       @db.Uuid
-  name        String
+  slug        String       @unique
+  title       String
   description String?
-  is_private  Boolean      @default(false)
+  is_public   Boolean      @default(true)
+  is_backlog  Boolean      @default(false)
   created_at  DateTime     @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime     @updatedAt @db.Timestamptz(6)
   list_items  list_items[]
   users       users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, is_backlog], map: "lists_user_backlog_idx")
+}
+
+model muted_users {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  muter_id  String   @db.Uuid
+  muted_id  String   @db.Uuid
+  until     DateTime @db.Timestamptz(6)
+  muter     users    @relation("muted_users_muter", fields: [muter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  muted     users    @relation("muted_users_muted", fields: [muted_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([muter_id, muted_id], map: "muted_users_pair_unique")
 }
 
 model news {
-  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   title        String
-  url          String
-  source       String?
-  published_at DateTime? @db.Timestamptz(6)
-  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  slug         String   @unique
+  source       String
+  source_url   String
+  excerpt      String
+  cover_url    String?
+  published_at DateTime @db.Timestamptz(6)
+  is_featured  Boolean  @default(false)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
 
-  @@index([published_at(sort: Desc)], map: "news_published_idx")
+  @@index([published_at(sort: Desc), is_featured], map: "news_published_featured_idx")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -322,16 +345,20 @@ model users {
   password_hash                      String
   display_name                       String
   avatar_url                         String?
+  is_admin                           Boolean                @default(false)
   email_verified_at                  DateTime?              @db.Timestamptz(6)
   provider                           String?
   provider_id                        String?
-  activities                         activities[]
+  activities_as_actor                activities[]           @relation("activities_actor")
+  activities_as_target               activities[]           @relation("activities_target")
   comments                           comments[]
   daily_tango_attempts               daily_tango_attempts[]
   follows_follows_followee_idTousers follows[]              @relation("follows_followee_idTousers")
   follows_follows_follower_idTousers follows[]              @relation("follows_follower_idTousers")
   game_media                         game_media[]
   lists                              lists[]
+  muted_users_as_muter               muted_users[]          @relation("muted_users_muter")
+  muted_users_as_muted               muted_users[]          @relation("muted_users_muted")
   parties                            parties[]
   party_members                      party_members[]
   profiles                           profiles?
@@ -339,16 +366,6 @@ model users {
   reports                            reports[]
   review_likes                       review_likes[]
   reviews                            reviews[]
-}
-
-enum activity_type {
-  follow
-  rating_added
-  review_created
-  list_published
-  list_item_added
-  party_created
-  party_joined
 }
 
 enum game_type {

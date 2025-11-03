@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
+import { ActivityService } from "../../common/activity/activity.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 
@@ -9,7 +10,10 @@ type UserWithProfileResult = Prisma.usersGetPayload<{ include: { profiles: true 
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activity: ActivityService,
+  ) {}
 
   async getMe(userId: string) {
     const user = await this.findUserWithProfile(userId);
@@ -82,6 +86,14 @@ export class UsersService {
     try {
       await this.prisma.follows.create({
         data: { follower_id: userId, followee_id: targetId },
+      });
+
+      await this.activity.recordActivity({
+        actorId: userId,
+        verb: "follow",
+        objectType: "user",
+        objectId: targetId,
+        targetUserId: targetId,
       });
     } catch (error) {
       if (this.isPrismaError(error, "P2002")) {
