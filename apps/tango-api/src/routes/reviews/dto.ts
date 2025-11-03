@@ -1,5 +1,13 @@
-﻿import { Type } from "class-transformer";
-import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator";
+﻿import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class ListReviewsQueryDto {
   @IsOptional()
@@ -49,6 +57,13 @@ export class UpdateReviewDto {
 }
 
 export class CreateCommentDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  body!: string;
+}
+
+export class UpdateCommentDto {
   @IsString()
   @MinLength(1)
   @MaxLength(2000)

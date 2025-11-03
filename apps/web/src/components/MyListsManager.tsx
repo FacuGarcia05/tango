@@ -71,7 +71,7 @@ export function MyListsManager({ initialLists }: MyListsManagerProps) {
   const handleDelete = useCallback(
     async (slug: string) => {
       const target = lists.find((list) => list.slug === slug);
-      if (!target || target.is_backlog) {
+      if (!target) {
         return;
       }
 
@@ -118,7 +118,7 @@ export function MyListsManager({ initialLists }: MyListsManagerProps) {
       <div className="rounded-3xl border border-border bg-surface/80 p-8 text-center shadow">
         <p className="text-base font-semibold text-text">Aun no tenes listas creadas</p>
         <p className="mt-2 text-sm text-text-muted">
-          Empeza creando tu backlog o una coleccion curada para compartir con amistades.
+          Crea una coleccion curada para compartir con amistades y usa el backlog desde la ficha de cada juego.
         </p>
         <Link
           href="/lists/new"
@@ -171,7 +171,7 @@ export function MyListsManager({ initialLists }: MyListsManagerProps) {
               </button>
               <button
                 type="button"
-                disabled={list.is_backlog || list.isProcessing}
+                disabled={list.isProcessing}
                 onClick={() => handleDelete(list.slug)}
                 className="rounded-lg border border-danger/50 bg-danger/10 px-4 py-2 text-xs font-semibold uppercase text-danger transition hover:border-danger hover:bg-danger/20 disabled:cursor-not-allowed disabled:opacity-60"
               >

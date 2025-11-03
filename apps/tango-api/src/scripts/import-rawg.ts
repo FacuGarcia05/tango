@@ -1,11 +1,11 @@
-import { Logger } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { NestFactory } from "@nestjs/core";
-import * as fs from "fs";
-import * as path from "path";
+import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { NestFactory } from '@nestjs/core';
+import * as fs from 'fs';
+import * as path from 'path';
 
-import { AppModule } from "../app.module";
-import { RawgService } from "../integrations/rawg/rawg.service";
+import { AppModule } from '../app.module';
+import { RawgService } from '../integrations/rawg/rawg.service';
 
 interface CliOptions {
   slug?: string;
@@ -14,26 +14,32 @@ interface CliOptions {
 }
 
 async function bootstrap() {
-  const logger = new Logger("RawgImportCLI");
+  const logger = new Logger('RawgImportCLI');
   const appContext = await NestFactory.createApplicationContext(AppModule, {
-    logger: ["error", "warn"],
+    logger: ['error', 'warn'],
   });
 
   try {
     const rawgService = appContext.get(RawgService);
     const config = appContext.get(ConfigService);
-    if (!config.get("RAWG_KEY")) {
-      logger.warn("RAWG_KEY no esta configurada. Agrega tus credenciales en .env");
+    if (!config.get('RAWG_KEY')) {
+      logger.warn(
+        'RAWG_KEY no esta configurada. Agrega tus credenciales en .env',
+      );
     }
 
     const options = parseArgs(process.argv.slice(2));
     if (options.topPages && options.topPages > 0) {
       const response = await rawgService.importTopGames(options.topPages);
-      logger.log(`Import top pages completado. Importados ${response.imported}/${response.total}`);
+      logger.log(
+        `Import top pages completado. Importados ${response.imported}/${response.total}`,
+      );
     } else {
       const slugs = await collectSlugs(options);
       if (!slugs.length) {
-        logger.error("Proporciona --slug <slug>, --file <archivo> o --top-pages <n>");
+        logger.error(
+          'Proporciona --slug <slug>, --file <archivo> o --top-pages <n>',
+        );
         process.exitCode = 1;
         return;
       }
@@ -58,16 +64,16 @@ function parseArgs(args: string[]): CliOptions {
   const options: CliOptions = {};
   for (let i = 0; i < args.length; i += 1) {
     const current = args[i];
-    if (current === "--slug" && args[i + 1]) {
+    if (current === '--slug' && args[i + 1]) {
       options.slug = args[i + 1];
       i += 1;
-    } else if (current === "--file" && args[i + 1]) {
+    } else if (current === '--file' && args[i + 1]) {
       options.file = args[i + 1];
       i += 1;
-    } else if (current === "--top-pages" && args[i + 1]) {
+    } else if (current === '--top-pages' && args[i + 1]) {
       options.topPages = Number(args[i + 1]);
       i += 1;
-    } else if (!current.startsWith("--")) {
+    } else if (!current.startsWith('--')) {
       if (!Number.isNaN(Number(current))) {
         options.topPages = Number(current);
       } else if (!options.slug) {
@@ -87,7 +93,7 @@ async function collectSlugs(options: CliOptions) {
     if (!fs.existsSync(filePath)) {
       throw new Error(`No existe el archivo ${filePath}`);
     }
-    const content = await fs.promises.readFile(filePath, "utf8");
+    const content = await fs.promises.readFile(filePath, 'utf8');
     return content
       .split(/\r?\n/)
       .map((line) => line.trim())
@@ -97,6 +103,6 @@ async function collectSlugs(options: CliOptions) {
 }
 
 bootstrap().catch((error) => {
-  console.error("Error ejecutando importador RAWG", error);
+  console.error('Error ejecutando importador RAWG', error);
   process.exit(1);
 });

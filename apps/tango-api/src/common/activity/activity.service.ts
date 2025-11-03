@@ -17,7 +17,8 @@ export class ActivityService {
   constructor(private readonly prisma: PrismaService) {}
 
   async recordActivity(params: RecordActivityParams) {
-    const { actorId, verb, objectType, objectId, targetUserId, metadata } = params;
+    const { actorId, verb, objectType, objectId, targetUserId, metadata } =
+      params;
 
     return this.prisma.activities.create({
       data: {

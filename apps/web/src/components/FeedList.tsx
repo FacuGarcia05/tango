@@ -160,15 +160,19 @@ function ActivityCard({
     <article className="space-y-3 rounded-2xl border border-border bg-surface/80 p-5 shadow-sm">
       <header className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="relative h-12 w-12 overflow-hidden rounded-full border border-border bg-background">
-            {activity.actor.avatar_url ? (
-              <Image src={activity.actor.avatar_url} alt={activity.actor.display_name} fill className="object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-text-muted">
-                {activity.actor.display_name.slice(0, 1).toUpperCase()}
-              </div>
-            )}
-          </div>
+          {activity.actor.avatar_url ? (
+            <Image
+              src={activity.actor.avatar_url}
+              alt={activity.actor.display_name}
+              width={48}
+              height={48}
+              className="h-12 w-12 rounded-full border border-border object-cover"
+            />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-background text-sm font-semibold text-text-muted">
+              {activity.actor.display_name.slice(0, 1).toUpperCase()}
+            </div>
+          )}
           <div>
             <div className="text-sm text-text">{description}</div>
             {createdAt ? <p className="text-xs text-text-muted">{createdAt}</p> : null}
@@ -191,14 +195,13 @@ function ActivityCard({
 
       {activity.payload?.game ? (
         <div className="flex items-center gap-3 rounded-xl border border-border bg-background/40 p-3">
-          <div className="relative h-12 w-12 overflow-hidden rounded-lg border border-border bg-background">
-            <Image
-              src={activity.payload.game.cover_url ?? "/placeholder-cover.svg"}
-              alt={activity.payload.game.title}
-              fill
-              className="object-cover"
-            />
-          </div>
+          <Image
+            src={activity.payload.game.cover_url ?? "/placeholder-cover.svg"}
+            alt={activity.payload.game.title}
+            width={48}
+            height={48}
+            className="h-12 w-12 rounded-lg border border-border object-cover"
+          />
           <div className="flex-1">
             <Link
               href={`/games/${activity.payload.game.slug}`}

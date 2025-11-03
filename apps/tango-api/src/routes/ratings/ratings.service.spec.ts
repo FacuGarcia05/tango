@@ -1,7 +1,7 @@
-import { NotFoundException } from "@nestjs/common";
+import { NotFoundException } from '@nestjs/common';
 
-import { PrismaService } from "../../prisma/prisma.service";
-import { RatingsService } from "./ratings.service";
+import { PrismaService } from '../../prisma/prisma.service';
+import { RatingsService } from './ratings.service';
 
 const prismaMock = {
   games: {
@@ -18,7 +18,7 @@ const prismaMock = {
   $transaction: jest.fn(),
 } as unknown as PrismaService;
 
-describe("RatingsService", () => {
+describe('RatingsService', () => {
   let service: RatingsService;
 
   beforeEach(() => {
@@ -26,25 +26,33 @@ describe("RatingsService", () => {
     service = new RatingsService(prismaMock);
   });
 
-  describe("findMineBySlug", () => {
-    it("throws when game does not exist", async () => {
+  describe('findMineBySlug', () => {
+    it('throws when game does not exist', async () => {
       (prismaMock.games.findUnique as jest.Mock).mockResolvedValue(null);
-      await expect(service.findMineBySlug("user-1", "missing")).rejects.toThrow(NotFoundException);
+      await expect(service.findMineBySlug('user-1', 'missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
-    it("returns null when rating absent", async () => {
-      (prismaMock.games.findUnique as jest.Mock).mockResolvedValue({ id: "game-1" });
+    it('returns null when rating absent', async () => {
+      (prismaMock.games.findUnique as jest.Mock).mockResolvedValue({
+        id: 'game-1',
+      });
       (prismaMock.ratings.findUnique as jest.Mock).mockResolvedValue(null);
 
-      const result = await service.findMineBySlug("user-1", "slug");
+      const result = await service.findMineBySlug('user-1', 'slug');
       expect(result).toEqual({ value: null });
     });
 
-    it("returns numeric value when rating exists", async () => {
-      (prismaMock.games.findUnique as jest.Mock).mockResolvedValue({ id: "game-1" });
-      (prismaMock.ratings.findUnique as jest.Mock).mockResolvedValue({ score: 4 });
+    it('returns numeric value when rating exists', async () => {
+      (prismaMock.games.findUnique as jest.Mock).mockResolvedValue({
+        id: 'game-1',
+      });
+      (prismaMock.ratings.findUnique as jest.Mock).mockResolvedValue({
+        score: 4,
+      });
 
-      const result = await service.findMineBySlug("user-1", "slug");
+      const result = await service.findMineBySlug('user-1', 'slug');
       expect(result).toEqual({ value: 4 });
     });
   });

@@ -25,7 +25,13 @@ import { JwtOptionalAuthGuard } from './jwt-optional.guard';
       }),
     }),
   ],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, EmailService, JwtOptionalAuthGuard],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    GoogleStrategy,
+    EmailService,
+    JwtOptionalAuthGuard,
+  ],
   controllers: [AuthController],
   exports: [JwtOptionalAuthGuard],
 })

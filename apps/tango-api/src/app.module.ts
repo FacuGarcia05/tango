@@ -12,6 +12,7 @@ import { ReviewsModule } from './routes/reviews/reviews.module';
 import { UsersModule } from './routes/users/users.module';
 import { MediaModule } from './routes/media/media.module';
 import { RawgModule } from './integrations/rawg/rawg.module';
+import { BacklogModule } from './routes/backlog/backlog.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { RawgModule } from './integrations/rawg/rawg.module';
     MediaModule,
     RawgModule,
     ListsModule,
+    BacklogModule,
     FeedModule,
     NewsModule,
   ],

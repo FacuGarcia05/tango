@@ -183,9 +183,24 @@ export interface ListPaginatedResponse {
   items: ListSummary[];
 }
 
-export interface ToggleBacklogResponse {
+export interface BacklogEntry {
+  id: string;
+  created_at: string;
+  game: ListItemGame;
+}
+
+export interface BacklogListResponse {
+  count: number;
+  items: BacklogEntry[];
+}
+
+export interface BacklogMutationResponse {
   inBacklog: boolean;
   count: number;
+}
+
+export interface BacklogContainsResponse {
+  inBacklog: boolean;
 }
 
 export type FeedVerb =

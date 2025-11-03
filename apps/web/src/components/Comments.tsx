@@ -20,8 +20,16 @@ export function Comments({ reviewId, currentUser, open, onCountChange }: Comment
   const [error, setError] = useState<string | null>(null);
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editBody, setEditBody] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const canSubmit = useMemo(() => body.trim().length > 0 && body.trim().length <= 2000, [body]);
+  const editLength = useMemo(() => editBody.trim().length, [editBody]);
+  const canSaveEdit = useMemo(
+    () => editingId !== null && editLength > 0 && editLength <= 2000,
+    [editLength, editingId],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -89,6 +97,50 @@ export function Comments({ reviewId, currentUser, open, onCountChange }: Comment
     [body, canSubmit, comments.length, currentUser, onCountChange, reviewId, submitting]
   );
 
+  const beginEdit = useCallback(
+    (comment: ReviewComment) => {
+      setEditingId(comment.id);
+      setEditBody(comment.body);
+      setError(null);
+    },
+    [],
+  );
+
+  const cancelEdit = useCallback(() => {
+    setEditingId(null);
+    setEditBody("");
+    setSavingEdit(false);
+  }, []);
+
+  const handleUpdate = useCallback(async () => {
+    if (!currentUser || !editingId || !canSaveEdit || savingEdit) {
+      return;
+    }
+
+    setSavingEdit(true);
+    setError(null);
+
+    const payload = editBody.trim();
+
+    try {
+      const updated = await api<ReviewComment>(`/reviews/${reviewId}/comments/${editingId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ body: payload }),
+      });
+
+      setComments((prev) => prev.map((comment) => (comment.id === updated.id ? updated : comment)));
+      cancelEdit();
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message || "No se pudo actualizar el comentario"
+          : "No se pudo actualizar el comentario";
+      setError(message);
+    } finally {
+      setSavingEdit(false);
+    }
+  }, [cancelEdit, canSaveEdit, currentUser, editBody, editingId, reviewId, savingEdit]);
+
   const handleDelete = useCallback(
     async (commentId: string) => {
       if (!currentUser) return;
@@ -102,6 +154,9 @@ export function Comments({ reviewId, currentUser, open, onCountChange }: Comment
           onCountChange?.(next.length);
           return next;
         });
+        if (editingId === commentId) {
+          cancelEdit();
+        }
       } catch (err) {
         const message =
           err instanceof ApiError
@@ -110,7 +165,7 @@ export function Comments({ reviewId, currentUser, open, onCountChange }: Comment
         setError(message);
       }
     },
-    [currentUser, onCountChange, reviewId]
+    [cancelEdit, currentUser, editingId, onCountChange, reviewId]
   );
 
   if (!open) {
@@ -127,6 +182,13 @@ export function Comments({ reviewId, currentUser, open, onCountChange }: Comment
           {comments.map((comment) => {
             const authorHref = comment.author.id ? `/users/${comment.author.id}` : undefined;
             const avatarSrc = comment.author.avatar_url || "/avatar-placeholder.png";
+            const isAuthor = currentUser?.id === comment.user_id;
+            const isEditing = editingId === comment.id;
+            const isEdited =
+              Boolean(comment.updated_at) &&
+              comment.updated_at !== null &&
+              comment.updated_at !== comment.created_at;
+
             return (
               <li key={comment.id} className="rounded-lg border border-border/40 bg-bg/60 p-3">
                 <div className="flex items-center justify-between gap-3">
@@ -154,26 +216,70 @@ export function Comments({ reviewId, currentUser, open, onCountChange }: Comment
                       ) : (
                         <span className="text-xs font-semibold text-text">{comment.author.display_name}</span>
                       )}
-                      <time dateTime={comment.created_at} className="text-xs text-text-muted">
-                        {new Date(comment.created_at).toLocaleDateString("es-AR", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </time>
+                      <div className="flex items-center gap-2 text-xs text-text-muted">
+                        <time dateTime={comment.created_at}>
+                          {new Date(comment.created_at).toLocaleDateString("es-AR", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </time>
+                        {isEdited ? <span>· Editado</span> : null}
+                      </div>
                     </div>
                   </div>
-                  {currentUser?.id === comment.user_id ? (
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(comment.id)}
-                      className="text-xs font-semibold text-danger transition hover:underline"
-                    >
-                      Borrar
-                    </button>
+                  {isAuthor ? (
+                    <div className="flex items-center gap-3 text-xs font-semibold">
+                      {isEditing ? (
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          className="text-text transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                        >
+                          Cancelar
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => beginEdit(comment)}
+                          className="text-text transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                        >
+                          Editar
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(comment.id)}
+                        className="text-danger transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                      >
+                        Borrar
+                      </button>
+                    </div>
                   ) : null}
                 </div>
-                <p className="mt-2 whitespace-pre-wrap text-sm text-text">{comment.body}</p>
+                {isEditing ? (
+                  <div className="mt-2 space-y-2">
+                    <textarea
+                      value={editBody}
+                      onChange={(event) => setEditBody(event.target.value)}
+                      rows={3}
+                      className="w-full rounded-md border border-border bg-bg/80 px-3 py-2 text-sm text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                    />
+                    <div className="flex items-center justify-between text-xs text-text-muted">
+                      <span>{editLength}/2000</span>
+                      <button
+                        type="button"
+                        onClick={handleUpdate}
+                        disabled={!canSaveEdit || savingEdit}
+                        className="rounded-md bg-primary px-3 py-1.5 font-semibold text-primary-contrast transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {savingEdit ? "Guardando..." : "Guardar cambios"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-text">{comment.body}</p>
+                )}
               </li>
             );
           })}

@@ -55,7 +55,10 @@ export class FeedController {
   }
 
   @Delete('mute/:userId')
-  unmuteUser(@CurrentUser() user: any, @Param('userId', new ParseUUIDPipe()) userId: string) {
+  unmuteUser(
+    @CurrentUser() user: any,
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+  ) {
     return this.service.unmuteUser(user.sub, userId);
   }
 }

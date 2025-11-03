@@ -1,9 +1,9 @@
-﻿import { Module } from "@nestjs/common";
-import { MulterModule } from "@nestjs/platform-express";
-import { memoryStorage } from "multer";
+﻿import { Module } from '@nestjs/common';
+import { MulterModule } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 
-import { UploadsService } from "../../common/upload/uploads.service";
-import { MediaController } from "./media.controller";
+import { UploadsService } from '../../common/upload/uploads.service';
+import { MediaController } from './media.controller';
 
 @Module({
   imports: [

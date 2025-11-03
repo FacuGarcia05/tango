@@ -143,19 +143,7 @@ async function main() {
     },
   });
 
-  // backlog y lista publica demo
-  const backlog = await prisma.lists.upsert({
-    where: { slug: "demo-backlog" },
-    update: {},
-    create: {
-      slug: "demo-backlog",
-      title: "Backlog",
-      user_id: demoUser.id,
-      is_public: false,
-      is_backlog: true,
-    },
-  });
-
+  // lista publica demo
   const curatedList = await prisma.lists.upsert({
     where: { slug: "indies-imprescindibles" },
     update: {},
@@ -170,10 +158,16 @@ async function main() {
 
   await prisma.list_items.createMany({
     data: [
-      { list_id: backlog.id, game_id: hollowKnight.id, position: 1 },
-      { list_id: backlog.id, game_id: celeste.id, position: 2 },
       { list_id: curatedList.id, game_id: hollowKnight.id, position: 1, note: "Atmosfera unica." },
       { list_id: curatedList.id, game_id: celeste.id, position: 2, note: "Plataformas intenso." },
+    ],
+    skipDuplicates: true,
+  });
+
+  await prisma.backlog_entries.createMany({
+    data: [
+      { user_id: demoUser.id, game_id: hollowKnight.id },
+      { user_id: demoUser.id, game_id: celeste.id },
     ],
     skipDuplicates: true,
   });

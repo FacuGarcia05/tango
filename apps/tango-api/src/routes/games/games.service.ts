@@ -1,4 +1,8 @@
-﻿import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+﻿import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, game_type } from '@prisma/client';
 
 import { PrismaService } from '../../prisma/prisma.service';
@@ -9,11 +13,12 @@ type GameWithRelations = Prisma.gamesGetPayload<{
     game_stats: true;
     game_genres: { include: { genres: true } };
     game_platforms: { include: { platforms: true } };
-    games: { select: { id: true, slug: true, title: true } };
+    games: { select: { id: true; slug: true; title: true } };
   };
 }>;
 
-interface SimplifiedGame extends Omit<GameWithRelations, 'game_genres' | 'game_platforms' | 'games'> {
+interface SimplifiedGame
+  extends Omit<GameWithRelations, 'game_genres' | 'game_platforms' | 'games'> {
   genres: Array<{ slug: string; name: string }>;
   platforms: Array<{ slug: string; name: string }>;
   parentGame?: { id: string; slug: string; title: string } | null;
@@ -26,8 +31,14 @@ export class GamesService {
   private readonly mapGame = (game: GameWithRelations): SimplifiedGame => {
     const { game_genres, game_platforms, games: parent, ...rest } = game;
 
-    const genres = game_genres.map(({ genres }) => ({ slug: genres.slug, name: genres.name }));
-    const platforms = game_platforms.map(({ platforms }) => ({ slug: platforms.slug, name: platforms.name }));
+    const genres = game_genres.map(({ genres }) => ({
+      slug: genres.slug,
+      name: genres.name,
+    }));
+    const platforms = game_platforms.map(({ platforms }) => ({
+      slug: platforms.slug,
+      name: platforms.name,
+    }));
 
     return {
       ...rest,
@@ -46,12 +57,14 @@ export class GamesService {
       new Set(
         values
           .map((value) => value?.trim().toLowerCase())
-          .filter((value): value is string => Boolean(value && value.length))
-      )
+          .filter((value): value is string => Boolean(value && value.length)),
+      ),
     );
   }
 
-  private buildGenreFilter(genres: string[]): Prisma.gamesWhereInput | undefined {
+  private buildGenreFilter(
+    genres: string[],
+  ): Prisma.gamesWhereInput | undefined {
     if (!genres.length) {
       return undefined;
     }
@@ -70,7 +83,9 @@ export class GamesService {
     };
   }
 
-  private buildPlatformFilter(platforms: string[]): Prisma.gamesWhereInput | undefined {
+  private buildPlatformFilter(
+    platforms: string[],
+  ): Prisma.gamesWhereInput | undefined {
     if (!platforms.length) {
       return undefined;
     }
@@ -103,7 +118,8 @@ export class GamesService {
 
     const genres = this.sanitizeArray(genre);
     const platforms = this.sanitizeArray(platform);
-    const sortDirection: Prisma.SortOrder = direction === 'desc' ? 'desc' : 'asc';
+    const sortDirection: Prisma.SortOrder =
+      direction === 'desc' ? 'desc' : 'asc';
 
     const filters: Prisma.gamesWhereInput[] = [];
 
@@ -126,7 +142,9 @@ export class GamesService {
     const platformFilter = this.buildPlatformFilter(platforms);
     if (platformFilter) filters.push(platformFilter);
 
-    const where: Prisma.gamesWhereInput = filters.length ? { AND: filters } : {};
+    const where: Prisma.gamesWhereInput = filters.length
+      ? { AND: filters }
+      : {};
 
     const orderBy: Prisma.gamesOrderByWithRelationInput[] = [];
     if (order === 'rating') {
@@ -193,7 +211,10 @@ export class GamesService {
   }
 
   async findDlcsOf(slug: string) {
-    const base = await this.prisma.games.findUnique({ where: { slug }, select: { id: true } });
+    const base = await this.prisma.games.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
     if (!base) {
       throw new NotFoundException('Juego no encontrado');
     }
@@ -218,7 +239,10 @@ export class GamesService {
       throw new BadRequestException('URL de portada invalida');
     }
 
-    const game = await this.prisma.games.findUnique({ where: { slug }, select: { slug: true } });
+    const game = await this.prisma.games.findUnique({
+      where: { slug },
+      select: { slug: true },
+    });
     if (!game) {
       throw new NotFoundException('Juego no encontrado');
     }
@@ -244,4 +268,3 @@ export class GamesService {
     });
   }
 }
-

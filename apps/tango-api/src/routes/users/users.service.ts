@@ -1,12 +1,19 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
-import { ActivityService } from "../../common/activity/activity.service";
-import { PrismaService } from "../../prisma/prisma.service";
-import { UpdateProfileDto } from "./dto/update-profile.dto";
+import { ActivityService } from '../../common/activity/activity.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
-type UserWithProfileResult = Prisma.usersGetPayload<{ include: { profiles: true } }>;
+type UserWithProfileResult = Prisma.usersGetPayload<{
+  include: { profiles: true };
+}>;
 
 @Injectable()
 export class UsersService {
@@ -28,13 +35,15 @@ export class UsersService {
     if (dto.displayName !== undefined) {
       const name = dto.displayName.trim();
       if (name.length < 2) {
-        throw new BadRequestException("El nombre debe tener al menos 2 caracteres");
+        throw new BadRequestException(
+          'El nombre debe tener al menos 2 caracteres',
+        );
       }
       userData.display_name = name;
     }
 
     if (dto.avatarUrl !== undefined) {
-      const avatar = this.normalizeUrl(dto.avatarUrl, "avatarUrl");
+      const avatar = this.normalizeUrl(dto.avatarUrl, 'avatarUrl');
       userData.avatar_url = avatar ?? null;
     }
 
@@ -43,10 +52,15 @@ export class UsersService {
     }
 
     const bioNormalized = dto.bio === undefined ? undefined : dto.bio.trim();
-    const backdropNormalized = dto.backdropUrl === undefined ? undefined : this.normalizeUrl(dto.backdropUrl, "backdropUrl");
+    const backdropNormalized =
+      dto.backdropUrl === undefined
+        ? undefined
+        : this.normalizeUrl(dto.backdropUrl, 'backdropUrl');
 
     if (bioNormalized !== undefined && bioNormalized.length > 280) {
-      throw new BadRequestException("La bio puede tener como maximo 280 caracteres");
+      throw new BadRequestException(
+        'La bio puede tener como maximo 280 caracteres',
+      );
     }
 
     if (bioNormalized !== undefined || backdropNormalized !== undefined) {
@@ -78,7 +92,7 @@ export class UsersService {
 
   async follow(userId: string, targetId: string) {
     if (userId === targetId) {
-      throw new BadRequestException("No podes seguirte a vos mismo");
+      throw new BadRequestException('No podes seguirte a vos mismo');
     }
 
     await this.ensureUserExists(targetId);
@@ -90,14 +104,14 @@ export class UsersService {
 
       await this.activity.recordActivity({
         actorId: userId,
-        verb: "follow",
-        objectType: "user",
+        verb: 'follow',
+        objectType: 'user',
         objectId: targetId,
         targetUserId: targetId,
       });
     } catch (error) {
-      if (this.isPrismaError(error, "P2002")) {
-        throw new ConflictException("Ya sigues a este usuario");
+      if (this.isPrismaError(error, 'P2002')) {
+        throw new ConflictException('Ya sigues a este usuario');
       }
       throw error;
     }
@@ -107,7 +121,7 @@ export class UsersService {
 
   async unfollow(userId: string, targetId: string) {
     if (userId === targetId) {
-      throw new NotFoundException("No sigues a este usuario");
+      throw new NotFoundException('No sigues a este usuario');
     }
 
     try {
@@ -120,8 +134,8 @@ export class UsersService {
         },
       });
     } catch (error) {
-      if (this.isPrismaError(error, "P2025")) {
-        throw new NotFoundException("No sigues a este usuario");
+      if (this.isPrismaError(error, 'P2025')) {
+        throw new NotFoundException('No sigues a este usuario');
       }
       throw error;
     }
@@ -138,14 +152,21 @@ export class UsersService {
       viewerId
         ? this.prisma.follows.findUnique({
             where: {
-              follower_id_followee_id: { follower_id: viewerId, followee_id: targetId },
+              follower_id_followee_id: {
+                follower_id: viewerId,
+                followee_id: targetId,
+              },
             },
             select: { follower_id: true },
           })
         : Promise.resolve(null),
     ]);
 
-    const response: { followers: number; following: number; isFollowing?: boolean } = {
+    const response: {
+      followers: number;
+      following: number;
+      isFollowing?: boolean;
+    } = {
       followers,
       following,
     };
@@ -165,7 +186,9 @@ export class UsersService {
     const user = await this.findUserWithProfile(targetId);
 
     const [reviewCount, ratingCount, followStats] = await Promise.all([
-      this.prisma.reviews.count({ where: { user_id: targetId, is_deleted: false } }),
+      this.prisma.reviews.count({
+        where: { user_id: targetId, is_deleted: false },
+      }),
       this.prisma.ratings.count({ where: { user_id: targetId } }),
       this.getFollowStats(targetId, viewerId),
     ]);
@@ -181,8 +204,13 @@ export class UsersService {
     };
   }
 
-  async searchUsers(viewerId: string | undefined, q?: string, take = 10, skip = 0) {
-    const query = q?.trim() ?? "";
+  async searchUsers(
+    viewerId: string | undefined,
+    q?: string,
+    take = 10,
+    skip = 0,
+  ) {
+    const query = q?.trim() ?? '';
     if (!query.length) {
       return { total: 0, items: [] as Array<Record<string, unknown>> };
     }
@@ -191,8 +219,8 @@ export class UsersService {
 
     const where: Prisma.usersWhereInput = {
       OR: [
-        { display_name: { contains: query, mode: "insensitive" } },
-        { email: { contains: query, mode: "insensitive" } },
+        { display_name: { contains: query, mode: 'insensitive' } },
+        { email: { contains: query, mode: 'insensitive' } },
       ],
     };
 
@@ -200,7 +228,7 @@ export class UsersService {
       this.prisma.users.count({ where }),
       this.prisma.users.findMany({
         where,
-        orderBy: { display_name: "asc" },
+        orderBy: { display_name: 'asc' },
         take: limit,
         skip: offset,
         include: { profiles: true },
@@ -211,38 +239,51 @@ export class UsersService {
       return { total, items: [] };
     }
 
-    type FollowAggregate = { followee_id: string; _count: { followee_id: number } };
-    type FollowingAggregate = { follower_id: string; _count: { follower_id: number } };
+    type FollowAggregate = {
+      followee_id: string;
+      _count: { followee_id: number };
+    };
+    type FollowingAggregate = {
+      follower_id: string;
+      _count: { follower_id: number };
+    };
 
     const userIds = users.map((user) => user.id);
 
-    const [followerCounts, followingCounts, viewerFollowing] = await Promise.all([
-      this.prisma.follows.groupBy({
-        by: ["followee_id"],
-        where: { followee_id: { in: userIds } },
-        _count: { followee_id: true },
-      }),
-      this.prisma.follows.groupBy({
-        by: ["follower_id"],
-        where: { follower_id: { in: userIds } },
-        _count: { follower_id: true },
-      }),
-      viewerId
-        ? this.prisma.follows.findMany({
-            where: { follower_id: viewerId, followee_id: { in: userIds } },
-            select: { followee_id: true },
-          })
-        : Promise.resolve([]),
-    ]);
+    const [followerCounts, followingCounts, viewerFollowing] =
+      await Promise.all([
+        this.prisma.follows.groupBy({
+          by: ['followee_id'],
+          where: { followee_id: { in: userIds } },
+          _count: { followee_id: true },
+        }),
+        this.prisma.follows.groupBy({
+          by: ['follower_id'],
+          where: { follower_id: { in: userIds } },
+          _count: { follower_id: true },
+        }),
+        viewerId
+          ? this.prisma.follows.findMany({
+              where: { follower_id: viewerId, followee_id: { in: userIds } },
+              select: { followee_id: true },
+            })
+          : Promise.resolve([]),
+      ]);
 
     const followerMap = new Map<string, number>();
-    (followerCounts as FollowAggregate[]).forEach((entry) => followerMap.set(entry.followee_id, entry._count.followee_id));
+    (followerCounts as FollowAggregate[]).forEach((entry) =>
+      followerMap.set(entry.followee_id, entry._count.followee_id),
+    );
 
     const followingMap = new Map<string, number>();
-    (followingCounts as FollowingAggregate[]).forEach((entry) => followingMap.set(entry.follower_id, entry._count.follower_id));
+    (followingCounts as FollowingAggregate[]).forEach((entry) =>
+      followingMap.set(entry.follower_id, entry._count.follower_id),
+    );
 
     const viewerFollowingSet = new Set<string>();
-    (viewerFollowing as Array<{ followee_id: string }>).forEach((entry) => viewerFollowingSet.add(entry.followee_id));
+    (viewerFollowing as Array<{ followee_id: string }>).forEach((entry) =>
+      viewerFollowingSet.add(entry.followee_id),
+    );
 
     const items = users.map((user) => {
       const presented = this.presentUser(user);
@@ -261,9 +302,12 @@ export class UsersService {
   }
 
   private async ensureUserExists(userId: string) {
-    const exists = await this.prisma.users.findUnique({ where: { id: userId }, select: { id: true } });
+    const exists = await this.prisma.users.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
     if (!exists) {
-      throw new NotFoundException("Usuario no encontrado");
+      throw new NotFoundException('Usuario no encontrado');
     }
   }
 
@@ -274,13 +318,16 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException("Usuario no encontrado");
+      throw new NotFoundException('Usuario no encontrado');
     }
 
     return user as UserWithProfileResult;
   }
 
-  private normalizeUrl(value: string | null | undefined, field: string): string | null | undefined {
+  private normalizeUrl(
+    value: string | null | undefined,
+    field: string,
+  ): string | null | undefined {
     if (value === undefined) {
       return undefined;
     }
@@ -294,7 +341,9 @@ export class UsersService {
     }
 
     if (!/^https?:\/\//i.test(trimmed)) {
-      throw new BadRequestException(`El campo ${field} debe ser una URL valida (http/https)`);
+      throw new BadRequestException(
+        `El campo ${field} debe ser una URL valida (http/https)`,
+      );
     }
 
     return trimmed;
@@ -328,7 +377,9 @@ export class UsersService {
   }
 
   private isPrismaError(error: unknown, code: string): boolean {
-    return error instanceof PrismaClientKnownRequestError && error.code === code;
+    return (
+      error instanceof PrismaClientKnownRequestError && error.code === code
+    );
   }
 
   private sanitizePagination(take?: number, skip?: number) {

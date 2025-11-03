@@ -8,14 +8,23 @@ import { Prisma } from '@prisma/client';
 
 import { ActivityService } from '../../common/activity/activity.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AddListItemDto, CreateListDto, ReorderListDto, UpdateListDto } from './dto';
+import {
+  AddListItemDto,
+  CreateListDto,
+  ReorderListDto,
+  UpdateListDto,
+} from './dto';
 
 type ListWithOwnerAndItems = Prisma.listsGetPayload<{
   include: {
     users: { select: { id: true; display_name: true } };
     list_items: {
       orderBy: { position: 'asc' };
-      include: { games: { select: { id: true; slug: true; title: true; cover_url: true } } };
+      include: {
+        games: {
+          select: { id: true; slug: true; title: true; cover_url: true };
+        };
+      };
     };
     _count: { select: { list_items: true } };
   };
@@ -25,7 +34,11 @@ type ListWithItems = Prisma.listsGetPayload<{
   include: {
     list_items: {
       orderBy: { position: 'asc' };
-      include: { games: { select: { id: true; slug: true; title: true; cover_url: true } } };
+      include: {
+        games: {
+          select: { id: true; slug: true; title: true; cover_url: true };
+        };
+      };
     };
     _count: { select: { list_items: true } };
   };
@@ -58,12 +71,14 @@ export class ListsService {
     return base || 'lista';
   }
 
-  private async generateUniqueSlug(title: string, ignoreListId?: string): Promise<string> {
+  private async generateUniqueSlug(
+    title: string,
+    ignoreListId?: string,
+  ): Promise<string> {
     const base = this.slugify(title);
     let slug = base;
     let counter = 2;
 
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       const existing = await this.prisma.lists.findFirst({
         where: {
@@ -88,7 +103,9 @@ export class ListsService {
 
   private assertOwnership(list: { user_id: string }, userId: string) {
     if (list.user_id !== userId) {
-      throw new ForbiddenException('No tienes permiso para modificar esta lista');
+      throw new ForbiddenException(
+        'No tienes permiso para modificar esta lista',
+      );
     }
   }
 
@@ -141,7 +158,11 @@ export class ListsService {
       },
       include: {
         list_items: {
-          include: { games: { select: { id: true, slug: true, title: true, cover_url: true } } },
+          include: {
+            games: {
+              select: { id: true, slug: true, title: true, cover_url: true },
+            },
+          },
           orderBy: { position: 'asc' },
         },
         _count: { select: { list_items: true } },
@@ -161,14 +182,15 @@ export class ListsService {
 
   async findMine(userId: string) {
     const lists = await this.prisma.lists.findMany({
-      where: { user_id: userId },
-      orderBy: [
-        { is_backlog: 'desc' },
-        { created_at: 'desc' },
-      ],
+      where: { user_id: userId, is_backlog: false },
+      orderBy: [{ created_at: 'desc' }],
       include: {
         list_items: {
-          include: { games: { select: { id: true, slug: true, title: true, cover_url: true } } },
+          include: {
+            games: {
+              select: { id: true, slug: true, title: true, cover_url: true },
+            },
+          },
           orderBy: { position: 'asc' },
           take: 5,
         },
@@ -201,7 +223,11 @@ export class ListsService {
       include: {
         users: { select: { id: true, display_name: true } },
         list_items: {
-          include: { games: { select: { id: true, slug: true, title: true, cover_url: true } } },
+          include: {
+            games: {
+              select: { id: true, slug: true, title: true, cover_url: true },
+            },
+          },
           orderBy: { position: 'asc' },
         },
         _count: { select: { list_items: true } },
@@ -266,7 +292,11 @@ export class ListsService {
       include: {
         users: { select: { id: true, display_name: true } },
         list_items: {
-          include: { games: { select: { id: true, slug: true, title: true, cover_url: true } } },
+          include: {
+            games: {
+              select: { id: true, slug: true, title: true, cover_url: true },
+            },
+          },
           orderBy: { position: 'asc' },
         },
         _count: { select: { list_items: true } },
@@ -298,10 +328,6 @@ export class ListsService {
 
     this.assertOwnership(list, userId);
 
-    if (list.is_backlog) {
-      throw new BadRequestException('No puedes eliminar tu backlog');
-    }
-
     await this.prisma.lists.delete({
       where: { id: list.id },
     });
@@ -314,7 +340,11 @@ export class ListsService {
       where: { slug },
       include: {
         list_items: {
-          include: { games: { select: { id: true, slug: true, title: true, cover_url: true } } },
+          include: {
+            games: {
+              select: { id: true, slug: true, title: true, cover_url: true },
+            },
+          },
           orderBy: { position: 'asc' },
         },
         _count: { select: { list_items: true } },
@@ -365,7 +395,9 @@ export class ListsService {
         note: this.normalizeDescription(dto.note),
       },
       include: {
-        games: { select: { id: true, slug: true, title: true, cover_url: true } },
+        games: {
+          select: { id: true, slug: true, title: true, cover_url: true },
+        },
       },
     });
 
@@ -423,13 +455,19 @@ export class ListsService {
     const payloadIds = new Set(dto.items.map((item) => item.gameId));
 
     if (payloadIds.size !== dto.items.length) {
-      throw new BadRequestException('No se permiten juegos duplicados en el reordenamiento');
+      throw new BadRequestException(
+        'No se permiten juegos duplicados en el reordenamiento',
+      );
     }
 
-    const existingGameIds = new Set(list.list_items.map((item) => item.game_id));
+    const existingGameIds = new Set(
+      list.list_items.map((item) => item.game_id),
+    );
     for (const id of payloadIds) {
       if (!existingGameIds.has(id)) {
-        throw new BadRequestException('Todos los juegos deben pertenecer a la lista');
+        throw new BadRequestException(
+          'Todos los juegos deben pertenecer a la lista',
+        );
       }
     }
 
@@ -453,100 +491,15 @@ export class ListsService {
     return this.findBySlug(slug, userId);
   }
 
-  async toggleBacklog(userId: string, gameSlug: string) {
-    const game = await this.prisma.games.findUnique({
-      where: { slug: gameSlug },
-      select: { id: true, slug: true, title: true },
-    });
-
-    if (!game) {
-      throw new NotFoundException('Juego no encontrado');
-    }
-
-    let backlog = await this.prisma.lists.findFirst({
-      where: { user_id: userId, is_backlog: true },
-      select: { id: true, slug: true, title: true },
-    });
-
-    if (!backlog) {
-      const slug = await this.generateUniqueSlug('Backlog');
-      backlog = await this.prisma.lists.create({
-        data: {
-          user_id: userId,
-          slug,
-          title: 'Backlog',
-          is_public: false,
-          is_backlog: true,
-        },
-        select: { id: true, slug: true, title: true },
-      });
-
-      await this.activity.recordActivity({
-        actorId: userId,
-        verb: 'list:create',
-        objectType: 'list',
-        objectId: backlog.id,
-        metadata: {
-          list_slug: backlog.slug,
-          list_title: backlog.title,
-          backlog: true,
-        },
-      });
-    }
-
-    const existing = await this.prisma.list_items.findUnique({
-      where: { list_id_game_id: { list_id: backlog.id, game_id: game.id } },
-    });
-
-    if (existing) {
-      await this.prisma.list_items.delete({ where: { id: existing.id } });
-
-      const count = await this.prisma.list_items.count({ where: { list_id: backlog.id } });
-
-      return { inBacklog: false, count };
-    }
-
-    const last = await this.prisma.list_items.findFirst({
-      where: { list_id: backlog.id },
-      orderBy: { position: 'desc' },
-      select: { position: true },
-    });
-
-    await this.prisma.list_items.create({
-      data: {
-        list_id: backlog.id,
-        game_id: game.id,
-        position: (last?.position ?? 0) + 1,
-      },
-    });
-
-      await this.activity.recordActivity({
-        actorId: userId,
-        verb: 'list:add',
-        objectType: 'list',
-        objectId: backlog.id,
-        metadata: {
-          list_slug: backlog.slug,
-          list_title: backlog.title,
-          game_id: game.id,
-          game_slug: game.slug,
-          game_title: game.title,
-          backlog: true,
-        },
-      });
-
-    const count = await this.prisma.list_items.count({ where: { list_id: backlog.id } });
-
-    return { inBacklog: true, count };
-  }
-
   async findPublicByUser(userId: string, page = 1, take = 20) {
     const limit = Math.min(Math.max(take, 1), 50);
     const currentPage = Math.max(page, 1);
     const skip = (currentPage - 1) * limit;
 
     const [total, lists] = await this.prisma.$transaction([
-      this.prisma.lists.count({ where: { user_id: userId, is_public: true, is_backlog: false } }),
+      this.prisma.lists.count({
+        where: { user_id: userId, is_public: true, is_backlog: false },
+      }),
       this.prisma.lists.findMany({
         where: { user_id: userId, is_public: true, is_backlog: false },
         orderBy: { created_at: 'desc' },
@@ -554,7 +507,11 @@ export class ListsService {
         skip,
         include: {
           list_items: {
-            include: { games: { select: { id: true, slug: true, title: true, cover_url: true } } },
+            include: {
+              games: {
+                select: { id: true, slug: true, title: true, cover_url: true },
+              },
+            },
             orderBy: { position: 'asc' },
             take: 5,
           },

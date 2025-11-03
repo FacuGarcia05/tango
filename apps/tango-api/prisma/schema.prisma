@@ -145,6 +145,7 @@ model games {
   games                  games?                   @relation("gamesTogames", fields: [parent_game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   other_games            games[]                  @relation("gamesTogames")
   list_items             list_items[]
+  backlog_entries        backlog_entries[]
   parties                parties[]
   ratings                ratings[]
   reviews                reviews[]
@@ -188,6 +189,18 @@ model lists {
   users       users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id, is_backlog], map: "lists_user_backlog_idx")
+}
+
+model backlog_entries {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String   @db.Uuid
+  game_id    String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  games      games    @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, game_id], map: "backlog_entries_user_game_unique")
+  @@index([user_id, created_at(sort: Desc)], map: "backlog_entries_user_created_idx")
 }
 
 model muted_users {
@@ -357,6 +370,7 @@ model users {
   follows_follows_follower_idTousers follows[]              @relation("follows_follower_idTousers")
   game_media                         game_media[]
   lists                              lists[]
+  backlog_entries                    backlog_entries[]
   muted_users_as_muter               muted_users[]          @relation("muted_users_muter")
   muted_users_as_muted               muted_users[]          @relation("muted_users_muted")
   parties                            parties[]

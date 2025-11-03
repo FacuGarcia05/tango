@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { LogoutButton } from "@/components/LogoutButton";
@@ -236,7 +237,7 @@ export function ProfileContent() {
                     </span>
                   )}
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
                   <button
                     type="button"
                     onClick={handleOpenEditor}
@@ -245,6 +246,24 @@ export function ProfileContent() {
                     Editar perfil
                   </button>
                   <LogoutButton />
+                  <Link
+                    href="/lists/new"
+                className="rounded-md border border-border px-4 py-2 text-sm font-semibold text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              >
+                Nueva lista
+              </Link>
+              <Link
+                href="/backlog"
+                className="rounded-md border border-border px-4 py-2 text-sm font-semibold text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              >
+                Ver backlog
+              </Link>
+              <Link
+                href="/me/lists"
+                className="rounded-md border border-border px-4 py-2 text-sm font-semibold text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              >
+                Gestionar listas
+                  </Link>
                 </div>
               </div>
               {summary?.profile.bio ? (

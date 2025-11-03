@@ -1,5 +1,21 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiCookieAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCookieAuth,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { JwtOptionalAuthGuard } from '../auth/jwt-optional.guard';
@@ -71,11 +87,17 @@ export class UsersController {
 
   @Get('search')
   @UseGuards(JwtOptionalAuthGuard)
-  @ApiQuery({ name: 'q', required: false, description: 'Termino de busqueda por nombre o email' })
-  search(
-    @CurrentUser() user: any,
-    @Query() query: SearchUsersQueryDto,
-  ) {
-    return this.usersService.searchUsers(user?.sub, query.q, query.take, query.skip);
+  @ApiQuery({
+    name: 'q',
+    required: false,
+    description: 'Termino de busqueda por nombre o email',
+  })
+  search(@CurrentUser() user: any, @Query() query: SearchUsersQueryDto) {
+    return this.usersService.searchUsers(
+      user?.sub,
+      query.q,
+      query.take,
+      query.skip,
+    );
   }
 }

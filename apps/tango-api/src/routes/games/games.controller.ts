@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiCookieAuth, ApiTags } from '@nestjs/swagger';
 
 import { GetGamesQueryDto } from './dto';
@@ -11,7 +19,9 @@ export class GamesController {
   constructor(private service: GamesService) {}
 
   @Get()
-  list(@Query() query: GetGamesQueryDto): Promise<{ total: number; items: unknown[] }> {
+  list(
+    @Query() query: GetGamesQueryDto,
+  ): Promise<{ total: number; items: unknown[] }> {
     return this.service.findMany(query);
   }
 
