@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AddToBacklogButton } from "@/components/AddToBacklogButton";
+import { AddToListButton } from "@/components/AddToListButton";
 import { GameMediaUpload } from "@/components/GameMediaUpload";
 import { GameRatingPanel } from "@/components/GameRatingPanel";
 import { ReviewsSection } from "@/components/ReviewsSection";
@@ -151,6 +153,22 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
                 <div className="flex flex-col gap-3">
                   <SetCoverModal slug={game.slug} currentCover={game.cover_url ?? ""} />
                   <GameMediaUpload slug={game.slug} />
+                  <AddToListButton
+                    game={{
+                      id: game.id,
+                      slug: game.slug,
+                      title: game.title,
+                      cover_url: game.cover_url ?? undefined,
+                    }}
+                  />
+                  <AddToBacklogButton
+                    game={{
+                      id: game.id,
+                      slug: game.slug,
+                      title: game.title,
+                      cover_url: game.cover_url ?? undefined,
+                    }}
+                  />
                 </div>
               ) : null}
             </div>

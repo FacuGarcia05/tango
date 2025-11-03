@@ -38,7 +38,9 @@ function normalizeStringList(value: unknown): string[] | undefined {
   const normalized = Array.from(
     new Set(
       tokens
-        .map((token) => (typeof token === 'string' ? token.trim() : String(token)))
+        .map((token) =>
+          typeof token === 'string' ? token.trim() : String(token),
+        )
         .filter((token): token is string => token.length > 0)
         .map((token) => token.toLowerCase()),
     ),
@@ -47,7 +49,10 @@ function normalizeStringList(value: unknown): string[] | undefined {
   return normalized.length ? normalized : undefined;
 }
 
-function normalizeOrder(value: unknown, fallback: 'title' | 'release' | 'rating') {
+function normalizeOrder(
+  value: unknown,
+  fallback: 'title' | 'release' | 'rating',
+) {
   if (typeof value !== 'string') {
     return fallback;
   }

@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateNewsDto, UpdateNewsDto } from './dto';
@@ -17,12 +21,14 @@ export class NewsService {
     return base || 'noticia';
   }
 
-  private async generateUniqueSlug(title: string, ignoreId?: string): Promise<string> {
+  private async generateUniqueSlug(
+    title: string,
+    ignoreId?: string,
+  ): Promise<string> {
     const base = this.slugify(title);
     let slug = base;
     let counter = 2;
 
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       const existing = await this.prisma.news.findFirst({
         where: {

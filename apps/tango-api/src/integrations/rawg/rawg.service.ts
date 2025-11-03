@@ -1,10 +1,10 @@
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import axios, { AxiosHeaders, AxiosInstance } from "axios";
-import { createHash } from "crypto";
-import { game_type, media_type, Prisma } from "@prisma/client";
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import axios, { AxiosHeaders, AxiosInstance } from 'axios';
+import { createHash } from 'crypto';
+import { game_type, media_type, Prisma } from '@prisma/client';
 
-import { PrismaService } from "../../prisma/prisma.service";
+import { PrismaService } from '../../prisma/prisma.service';
 
 export interface RawgSearchResult {
   id: number;
@@ -60,11 +60,14 @@ export class RawgService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {
-    const baseUrl = this.config.get<string>("RAWG_BASE") ?? "https://api.rawg.io/api";
-    this.apiKey = this.config.get<string>("RAWG_KEY") ?? "";
-    this.userAgent = this.config.get<string>("RAWG_USER_AGENT") ?? "TANGO/1.0";
-    this.pageSize = Number(this.config.get<string>("RAWG_PAGE_SIZE") ?? 40);
-    this.delayMs = Number(this.config.get<string>("RAWG_IMPORT_DELAY_MS") ?? 300);
+    const baseUrl =
+      this.config.get<string>('RAWG_BASE') ?? 'https://api.rawg.io/api';
+    this.apiKey = this.config.get<string>('RAWG_KEY') ?? '';
+    this.userAgent = this.config.get<string>('RAWG_USER_AGENT') ?? 'TANGO/1.0';
+    this.pageSize = Number(this.config.get<string>('RAWG_PAGE_SIZE') ?? 40);
+    this.delayMs = Number(
+      this.config.get<string>('RAWG_IMPORT_DELAY_MS') ?? 300,
+    );
 
     this.client = axios.create({
       baseURL: baseUrl,
@@ -73,10 +76,12 @@ export class RawgService {
     this.client.interceptors.request.use((config) => {
       config.params = { ...(config.params || {}), key: this.apiKey };
       if (config.headers instanceof AxiosHeaders) {
-        config.headers.set("User-Agent", this.userAgent);
+        config.headers.set('User-Agent', this.userAgent);
       } else {
-        const headers = { ...(config.headers as Record<string, string> | undefined) };
-        headers["User-Agent"] = this.userAgent;
+        const headers = {
+          ...(config.headers as Record<string, string> | undefined),
+        };
+        headers['User-Agent'] = this.userAgent;
         config.headers = AxiosHeaders.from(headers);
       }
       return config;
@@ -106,24 +111,28 @@ export class RawgService {
   }
 
   async getScreenshots(id: number) {
-    const response = await this.client.get<RawgPagedResponse<{ id: number; image: string }>>(
-      `/games/${id}/screenshots`,
-      { params: { page_size: this.pageSize } },
-    );
+    const response = await this.client.get<
+      RawgPagedResponse<{ id: number; image: string }>
+    >(`/games/${id}/screenshots`, { params: { page_size: this.pageSize } });
     return response.data.results ?? [];
   }
 
   async getAdditions(id: number) {
-    const response = await this.client.get<RawgPagedResponse<RawgGameDetails>>(`/games/${id}/additions`, {
-      params: { page_size: this.pageSize },
-    });
+    const response = await this.client.get<RawgPagedResponse<RawgGameDetails>>(
+      `/games/${id}/additions`,
+      {
+        params: { page_size: this.pageSize },
+      },
+    );
     return response.data.results ?? [];
   }
 
   async importBySlug(slugOrName: string): Promise<ImportResult> {
     const match = await this.searchOneBySlugOrName(slugOrName);
     if (!match) {
-      throw new NotFoundException(`No encontramos el juego ${slugOrName} en RAWG`);
+      throw new NotFoundException(
+        `No encontramos el juego ${slugOrName} en RAWG`,
+      );
     }
 
     const rawgId = match.id;
@@ -135,8 +144,15 @@ export class RawgService {
 
     const baseGame = await this.upsertGame(details, null);
     const genreSlugs = await this.syncGenres(baseGame.id, details.genres ?? []);
-    const platformSlugs = await this.syncPlatforms(baseGame.id, details.platforms ?? []);
-    const screenshotsAdded = await this.addScreenshots(baseGame.id, screenshots, details.short_screenshots ?? []);
+    const platformSlugs = await this.syncPlatforms(
+      baseGame.id,
+      details.platforms ?? [],
+    );
+    const screenshotsAdded = await this.addScreenshots(
+      baseGame.id,
+      screenshots,
+      details.short_screenshots ?? [],
+    );
 
     const dlcResults: string[] = [];
     for (const addition of additions) {
@@ -153,7 +169,9 @@ export class RawgService {
       data: {
         updated_at: new Date(),
         dlc_count: dlcResults.length,
-        media_count: await this.prisma.game_media.count({ where: { game_id: baseGame.id } }),
+        media_count: await this.prisma.game_media.count({
+          where: { game_id: baseGame.id },
+        }),
       },
     });
 
@@ -169,7 +187,8 @@ export class RawgService {
   }
 
   async importBulk(slugs: string[]) {
-    const results: Array<{ slug: string; success: boolean; error?: string }> = [];
+    const results: Array<{ slug: string; success: boolean; error?: string }> =
+      [];
     for (const raw of slugs) {
       const slug = raw?.trim();
       if (!slug) continue;
@@ -177,7 +196,7 @@ export class RawgService {
         await this.importBySlug(slug);
         results.push({ slug, success: true });
       } catch (error: any) {
-        const message = error?.message ?? "Import failed";
+        const message = error?.message ?? 'Import failed';
         this.logger.error(`RAWG import failed for ${slug}: ${message}`);
         results.push({ slug, success: false, error: message });
       }
@@ -191,12 +210,15 @@ export class RawgService {
   }
 
   async listGames(page: number) {
-    const response = await this.client.get<RawgPagedResponse<RawgSearchResult>>("/games", {
-      params: {
-        page,
-        page_size: this.pageSize,
+    const response = await this.client.get<RawgPagedResponse<RawgSearchResult>>(
+      '/games',
+      {
+        params: {
+          page,
+          page_size: this.pageSize,
+        },
       },
-    });
+    );
     return response.data.results ?? [];
   }
 
@@ -216,7 +238,11 @@ export class RawgService {
 
     const slugs = Array.from(seen);
     if (!slugs.length) {
-      return { total: 0, imported: 0, errors: [] as Array<{ slug: string; success: false; error?: string }> };
+      return {
+        total: 0,
+        imported: 0,
+        errors: [] as Array<{ slug: string; success: false; error?: string }>,
+      };
     }
     return this.importBulk(slugs);
   }
@@ -230,15 +256,21 @@ export class RawgService {
     if (!exact) {
       params.search_precise = false;
     }
-    const response = await this.client.get<RawgPagedResponse<RawgSearchResult>>("/games", { params });
+    const response = await this.client.get<RawgPagedResponse<RawgSearchResult>>(
+      '/games',
+      { params },
+    );
     return response.data;
   }
 
   private async upsertGame(details: RawgGameDetails, parentId: string | null) {
-    const cover = details.background_image ?? details.short_screenshots?.[0]?.image ?? null;
+    const cover =
+      details.background_image ?? details.short_screenshots?.[0]?.image ?? null;
     const releaseDate = details.released ? new Date(details.released) : null;
     const estimatedHours =
-      typeof details.playtime === "number" && Number.isFinite(details.playtime) ? Math.round(details.playtime) : null;
+      typeof details.playtime === 'number' && Number.isFinite(details.playtime)
+        ? Math.round(details.playtime)
+        : null;
 
     const data: Prisma.gamesUncheckedCreateInput = {
       slug: details.slug,
@@ -269,7 +301,7 @@ export class RawgService {
     return result;
   }
 
-  private async syncGenres(gameId: string, genres: RawgGameDetails["genres"]) {
+  private async syncGenres(gameId: string, genres: RawgGameDetails['genres']) {
     if (!genres?.length) return [];
 
     const ensured = await Promise.all(
@@ -282,25 +314,35 @@ export class RawgService {
     return ensured.map((genre) => genre.slug);
   }
 
-  private async syncPlatforms(gameId: string, platforms: RawgGameDetails["platforms"]) {
+  private async syncPlatforms(
+    gameId: string,
+    platforms: RawgGameDetails['platforms'],
+  ) {
     if (!platforms?.length) return [];
 
     const ensured = await Promise.all(
       platforms
         .map((entry) => entry.platform)
-        .filter((platform): platform is NonNullable<typeof platform> => Boolean(platform?.slug))
+        .filter((platform): platform is NonNullable<typeof platform> =>
+          Boolean(platform?.slug),
+        )
         .map((platform) => this.ensurePlatform(platform.slug, platform.name)),
     );
 
     await this.prisma.game_platforms.createMany({
-      data: ensured.map((platform) => ({ game_id: gameId, platform_id: platform.id })),
+      data: ensured.map((platform) => ({
+        game_id: gameId,
+        platform_id: platform.id,
+      })),
       skipDuplicates: true,
     });
     return ensured.map((platform) => platform.slug);
   }
 
   private async ensureGenre(slug: string, name: string) {
-    const existingBySlug = await this.prisma.genres.findUnique({ where: { slug } });
+    const existingBySlug = await this.prisma.genres.findUnique({
+      where: { slug },
+    });
     if (existingBySlug) {
       if (existingBySlug.name !== name) {
         return this.prisma.genres.update({ where: { slug }, data: { name } });
@@ -308,7 +350,9 @@ export class RawgService {
       return existingBySlug;
     }
 
-    const existingByName = await this.prisma.genres.findUnique({ where: { name } });
+    const existingByName = await this.prisma.genres.findUnique({
+      where: { name },
+    });
     if (existingByName) {
       if (existingByName.slug !== slug) {
         return this.prisma.genres.update({ where: { name }, data: { slug } });
@@ -320,18 +364,28 @@ export class RawgService {
   }
 
   private async ensurePlatform(slug: string, name: string) {
-    const existingBySlug = await this.prisma.platforms.findUnique({ where: { slug } });
+    const existingBySlug = await this.prisma.platforms.findUnique({
+      where: { slug },
+    });
     if (existingBySlug) {
       if (existingBySlug.name !== name) {
-        return this.prisma.platforms.update({ where: { slug }, data: { name } });
+        return this.prisma.platforms.update({
+          where: { slug },
+          data: { name },
+        });
       }
       return existingBySlug;
     }
 
-    const existingByName = await this.prisma.platforms.findUnique({ where: { name } });
+    const existingByName = await this.prisma.platforms.findUnique({
+      where: { name },
+    });
     if (existingByName) {
       if (existingByName.slug !== slug) {
-        return this.prisma.platforms.update({ where: { name }, data: { slug } });
+        return this.prisma.platforms.update({
+          where: { name },
+          data: { slug },
+        });
       }
       return existingByName;
     }
@@ -354,7 +408,11 @@ export class RawgService {
     });
   }
 
-  private async addScreenshots(gameId: string, screenshots: Array<{ image: string }>, fallback: Array<{ image: string }>) {
+  private async addScreenshots(
+    gameId: string,
+    screenshots: Array<{ image: string }>,
+    fallback: Array<{ image: string }>,
+  ) {
     const inputs = [...(screenshots ?? []), ...(fallback ?? [])]
       .map((shot) => shot?.image)
       .filter((url): url is string => Boolean(url));
@@ -364,7 +422,7 @@ export class RawgService {
     const createPayload = inputs.map((url) => ({
       game_id: gameId,
       type: media_type.image,
-      provider: "rawg",
+      provider: 'rawg',
       provider_id: this.hash(url),
       url,
     }));
@@ -384,14 +442,16 @@ export class RawgService {
         });
         created += 1;
       } catch (error) {
-        this.logger.debug(`Screenshot already exists for ${gameId}: ${payload.url}`);
+        this.logger.debug(
+          `Screenshot already exists for ${gameId}: ${payload.url}`,
+        );
       }
     }
     return created;
   }
 
   private hash(value: string) {
-    return createHash("sha1").update(value).digest("hex");
+    return createHash('sha1').update(value).digest('hex');
   }
 
   private async delay(ms: number) {

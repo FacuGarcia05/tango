@@ -17,7 +17,13 @@ import { ApiBearerAuth, ApiCookieAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { JwtOptionalAuthGuard } from '../auth/jwt-optional.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { CreateCommentDto, CreateReviewDto, ListReviewsQueryDto, UpdateReviewDto } from './dto';
+import {
+  CreateCommentDto,
+  CreateReviewDto,
+  ListReviewsQueryDto,
+  UpdateCommentDto,
+  UpdateReviewDto,
+} from './dto';
 import { ReviewsService } from './reviews.service';
 
 @ApiTags('Reviews')
@@ -30,7 +36,12 @@ export class ReviewsController {
   @ApiBearerAuth()
   @ApiCookieAuth('access_token')
   listMine(@CurrentUser() user: any, @Query() q: ListReviewsQueryDto) {
-    return this.service.listByUser(user.sub, q.take ?? 20, q.skip ?? 0, user.sub);
+    return this.service.listByUser(
+      user.sub,
+      q.take ?? 20,
+      q.skip ?? 0,
+      user.sub,
+    );
   }
 
   @Get('users/:id/reviews')
@@ -58,14 +69,22 @@ export class ReviewsController {
     @Param('slug') slug: string,
     @Query() q: ListReviewsQueryDto,
   ) {
-    return this.service.listByGameSlug(slug, q.take ?? 20, q.skip ?? 0, user?.sub);
+    return this.service.listByGameSlug(
+      slug,
+      q.take ?? 20,
+      q.skip ?? 0,
+      user?.sub,
+    );
   }
 
   @Get('reviews/me/:gameId/exists')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiCookieAuth('access_token')
-  reviewExists(@CurrentUser() user: any, @Param('gameId', new ParseUUIDPipe()) gameId: string) {
+  reviewExists(
+    @CurrentUser() user: any,
+    @Param('gameId', new ParseUUIDPipe()) gameId: string,
+  ) {
     return this.service.userHasReview(user.sub, gameId);
   }
 
@@ -86,7 +105,10 @@ export class ReviewsController {
   @ApiBearerAuth()
   @ApiCookieAuth('access_token')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@CurrentUser() user: any, @Param('id', new ParseUUIDPipe()) id: string) {
+  async remove(
+    @CurrentUser() user: any,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
     await this.service.softDelete(user.sub, id);
   }
 
@@ -94,7 +116,10 @@ export class ReviewsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiCookieAuth('access_token')
-  toggleLike(@CurrentUser() user: any, @Param('id', new ParseUUIDPipe()) id: string) {
+  toggleLike(
+    @CurrentUser() user: any,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
     return this.service.toggleLike(user.sub, id);
   }
 
@@ -113,6 +138,19 @@ export class ReviewsController {
     @Body() dto: CreateCommentDto,
   ) {
     return this.service.createComment(user.sub, id, dto);
+  }
+
+  @Patch('reviews/:id/comments/:commentId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiCookieAuth('access_token')
+  updateComment(
+    @CurrentUser() user: any,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('commentId', new ParseUUIDPipe()) commentId: string,
+    @Body() dto: UpdateCommentDto,
+  ) {
+    return this.service.updateComment(user.sub, id, commentId, dto);
   }
 
   @Delete('reviews/:id/comments/:commentId')

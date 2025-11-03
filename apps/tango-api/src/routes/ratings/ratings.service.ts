@@ -61,7 +61,10 @@ export class RatingsService {
   }
 
   async findMineBySlug(userId: string, slug: string) {
-    const game = await this.prisma.games.findUnique({ where: { slug }, select: { id: true } });
+    const game = await this.prisma.games.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
     if (!game) {
       throw new NotFoundException('Juego no encontrado');
     }
@@ -74,7 +77,10 @@ export class RatingsService {
     return { value: rating ? Number(rating.score) : null };
   }
 
-  private async recomputeGameStats(tx: Prisma.TransactionClient, gameId: string): Promise<RatingStats> {
+  private async recomputeGameStats(
+    tx: Prisma.TransactionClient,
+    gameId: string,
+  ): Promise<RatingStats> {
     const agg = await tx.ratings.aggregate({
       where: { game_id: gameId },
       _avg: { score: true },

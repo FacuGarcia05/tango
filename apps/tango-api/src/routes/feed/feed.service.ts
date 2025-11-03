@@ -15,7 +15,13 @@ type ActivityWithRelations = Prisma.activitiesGetPayload<{
 }>;
 
 type ListSummary = Prisma.listsGetPayload<{
-  select: { id: true; slug: true; title: true; is_public: true; is_backlog: true };
+  select: {
+    id: true;
+    slug: true;
+    title: true;
+    is_public: true;
+    is_backlog: true;
+  };
 }>;
 
 type ReviewSummary = Prisma.reviewsGetPayload<{
@@ -77,7 +83,7 @@ export class FeedService {
     });
 
     const listPromise: Promise<ListSummary[]> = listIds.size
-      ? this.prisma.lists.findMany({
+      ? (this.prisma.lists.findMany({
           where: { id: { in: Array.from(listIds) } },
           select: {
             id: true,
@@ -86,38 +92,42 @@ export class FeedService {
             is_public: true,
             is_backlog: true,
           },
-        }) as Promise<ListSummary[]>
+        }) as Promise<ListSummary[]>)
       : Promise.resolve<ListSummary[]>([]);
 
     const reviewPromise: Promise<ReviewSummary[]> = reviewIds.size
-      ? this.prisma.reviews.findMany({
+      ? (this.prisma.reviews.findMany({
           where: { id: { in: Array.from(reviewIds) } },
           select: {
             id: true,
             title: true,
             has_spoilers: true,
             body: true,
-            games: { select: { id: true, slug: true, title: true, cover_url: true } },
+            games: {
+              select: { id: true, slug: true, title: true, cover_url: true },
+            },
           },
-        }) as Promise<ReviewSummary[]>
+        }) as Promise<ReviewSummary[]>)
       : Promise.resolve<ReviewSummary[]>([]);
 
     const ratingPromise: Promise<RatingSummary[]> = ratingIds.size
-      ? this.prisma.ratings.findMany({
+      ? (this.prisma.ratings.findMany({
           where: { id: { in: Array.from(ratingIds) } },
           select: {
             id: true,
             score: true,
-            games: { select: { id: true, slug: true, title: true, cover_url: true } },
+            games: {
+              select: { id: true, slug: true, title: true, cover_url: true },
+            },
           },
-        }) as Promise<RatingSummary[]>
+        }) as Promise<RatingSummary[]>)
       : Promise.resolve<RatingSummary[]>([]);
 
     const gamePromise: Promise<GameSummary[]> = gameSlugs.size
-      ? this.prisma.games.findMany({
+      ? (this.prisma.games.findMany({
           where: { slug: { in: Array.from(gameSlugs) } },
           select: { id: true, slug: true, title: true, cover_url: true },
-        }) as Promise<GameSummary[]>
+        }) as Promise<GameSummary[]>)
       : Promise.resolve<GameSummary[]>([]);
 
     const [lists, reviews, ratings, games] = await Promise.all([
@@ -138,7 +148,8 @@ export class FeedService {
     games.forEach((game) => gameMap.set(game.slug, game));
 
     return activities.map((activity) => {
-      const metadata = (activity.metadata as Record<string, any> | null) ?? undefined;
+      const metadata =
+        (activity.metadata as Record<string, any> | null) ?? undefined;
       let payload: Record<string, any> | undefined;
 
       if (activity.verb.startsWith('list:') && activity.object_id) {
@@ -211,7 +222,9 @@ export class FeedService {
     }
 
     const [total, activities] = await this.prisma.$transaction([
-      this.prisma.activities.count({ where: { actor_id: { in: visibleActors } } }),
+      this.prisma.activities.count({
+        where: { actor_id: { in: visibleActors } },
+      }),
       this.prisma.activities.findMany({
         where: { actor_id: { in: visibleActors } },
         orderBy: { created_at: 'desc' },
@@ -219,7 +232,9 @@ export class FeedService {
         take: limit,
         include: {
           actor: { select: { id: true, display_name: true, avatar_url: true } },
-          target_user: { select: { id: true, display_name: true, avatar_url: true } },
+          target_user: {
+            select: { id: true, display_name: true, avatar_url: true },
+          },
         },
       }),
     ]);

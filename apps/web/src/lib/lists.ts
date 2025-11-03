@@ -1,6 +1,6 @@
 import { api } from "./api";
 import type { AddListItemDto, CreateListDto, UpdateListDto } from "./lists.types";
-import type { ListDetail, ListSummary, ToggleBacklogResponse } from "@/types";
+import type { ListDetail, ListSummary } from "@/types";
 import type { ListItem } from "@/types";
 
 export async function fetchMyLists(): Promise<ListSummary[]> {
@@ -52,6 +52,3 @@ export async function reorderListItems(
   });
 }
 
-export async function toggleBacklog(gameSlug: string) {
-  return api<ToggleBacklogResponse>(`/backlog/toggle/${gameSlug}`, { method: "POST" });
-}

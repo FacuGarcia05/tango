@@ -8,7 +8,12 @@ import { Prisma } from '@prisma/client';
 
 import { ActivityService } from '../../common/activity/activity.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateCommentDto, CreateReviewDto, UpdateReviewDto } from './dto';
+import {
+  CreateCommentDto,
+  CreateReviewDto,
+  UpdateCommentDto,
+  UpdateReviewDto,
+} from './dto';
 
 type ReviewWithAuthor = Prisma.reviewsGetPayload<{
   include: {
@@ -86,8 +91,16 @@ export class ReviewsService {
     return review;
   }
 
-  async listByGameSlug(slug: string, take: number, skip: number, viewerId?: string) {
-    const game = await this.prisma.games.findUnique({ where: { slug }, select: { id: true } });
+  async listByGameSlug(
+    slug: string,
+    take: number,
+    skip: number,
+    viewerId?: string,
+  ) {
+    const game = await this.prisma.games.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
     if (!game) {
       throw new NotFoundException('Juego no encontrado');
     }
@@ -103,7 +116,9 @@ export class ReviewsService {
         skip,
         include: {
           users: { select: { id: true, display_name: true, avatar_url: true } },
-          games: { select: { id: true, slug: true, title: true, cover_url: true } },
+          games: {
+            select: { id: true, slug: true, title: true, cover_url: true },
+          },
         },
       }),
     ]);
@@ -113,7 +128,12 @@ export class ReviewsService {
     return { total, items: mapped };
   }
 
-  async listByUser(userId: string, take: number, skip: number, viewerId?: string) {
+  async listByUser(
+    userId: string,
+    take: number,
+    skip: number,
+    viewerId?: string,
+  ) {
     const baseWhere = { user_id: userId, is_deleted: false } as const;
 
     const [total, items] = await this.prisma.$transaction([
@@ -125,7 +145,9 @@ export class ReviewsService {
         skip,
         include: {
           users: { select: { id: true, display_name: true, avatar_url: true } },
-          games: { select: { id: true, slug: true, title: true, cover_url: true } },
+          games: {
+            select: { id: true, slug: true, title: true, cover_url: true },
+          },
         },
       }),
     ]);
@@ -141,7 +163,9 @@ export class ReviewsService {
       select: { id: true },
     });
 
-    return review ? { hasReview: true, reviewId: review.id } : { hasReview: false };
+    return review
+      ? { hasReview: true, reviewId: review.id }
+      : { hasReview: false };
   }
 
   async update(userId: string, id: string, dto: UpdateReviewDto) {
@@ -208,7 +232,9 @@ export class ReviewsService {
 
       if (existing) {
         await tx.review_likes.delete({
-          where: { user_id_review_id: { user_id: userId, review_id: reviewId } },
+          where: {
+            user_id_review_id: { user_id: userId, review_id: reviewId },
+          },
         });
         liked = false;
       } else {
@@ -218,7 +244,9 @@ export class ReviewsService {
         liked = true;
       }
 
-      const likes_count = await tx.review_likes.count({ where: { review_id: reviewId } });
+      const likes_count = await tx.review_likes.count({
+        where: { review_id: reviewId },
+      });
 
       return { liked, likes_count };
     });
@@ -255,6 +283,38 @@ export class ReviewsService {
     });
 
     return this.presentComment(comment);
+  }
+
+  async updateComment(
+    userId: string,
+    reviewId: string,
+    commentId: string,
+    dto: UpdateCommentDto,
+  ) {
+    const comment = await this.prisma.comments.findUnique({
+      where: { id: commentId },
+      select: { id: true, user_id: true, review_id: true, is_deleted: true },
+    });
+
+    if (!comment || comment.review_id !== reviewId || comment.is_deleted) {
+      throw new NotFoundException('Comentario no encontrado');
+    }
+
+    if (comment.user_id !== userId) {
+      throw new ForbiddenException('No autorizado');
+    }
+
+    const body = this.sanitizeComment(dto.body);
+
+    const updated = await this.prisma.comments.update({
+      where: { id: commentId },
+      data: { body, updated_at: new Date() },
+      include: {
+        users: { select: { id: true, display_name: true, avatar_url: true } },
+      },
+    });
+
+    return this.presentComment(updated);
   }
 
   async deleteComment(userId: string, reviewId: string, commentId: string) {
@@ -347,7 +407,11 @@ export class ReviewsService {
     return new Set(likes.map((entry) => entry.review_id));
   }
 
-  private presentReview(review: ReviewWithAuthor, stats: ReviewStatsMap, liked: Set<string>) {
+  private presentReview(
+    review: ReviewWithAuthor,
+    stats: ReviewStatsMap,
+    liked: Set<string>,
+  ) {
     return {
       id: review.id,
       user_id: review.user_id,
@@ -401,12 +465,17 @@ export class ReviewsService {
       throw new BadRequestException('El comentario no puede estar vacio');
     }
     if (trimmed.length > 2000) {
-      throw new BadRequestException('El comentario no puede exceder los 2000 caracteres');
+      throw new BadRequestException(
+        'El comentario no puede exceder los 2000 caracteres',
+      );
     }
     return trimmed;
   }
 
-  private async recomputeGameReviewStats(tx: Prisma.TransactionClient, gameId: string) {
+  private async recomputeGameReviewStats(
+    tx: Prisma.TransactionClient,
+    gameId: string,
+  ) {
     const review_count = await tx.reviews.count({
       where: { game_id: gameId, is_deleted: false },
     });

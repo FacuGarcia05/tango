@@ -57,8 +57,8 @@ async function getCookieHeader(): Promise<string | null> {
 
   try {
     const { cookies } = await import("next/headers");
-    const cookieStore = cookies();
-    const cookieHeader = cookieStore.toString();
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore?.toString() ?? "";
     return cookieHeader.length ? cookieHeader : null;
   } catch (error) {
     console.warn("Failed to read request cookies", error);
