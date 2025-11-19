@@ -13,6 +13,8 @@ import { UsersModule } from './routes/users/users.module';
 import { MediaModule } from './routes/media/media.module';
 import { RawgModule } from './integrations/rawg/rawg.module';
 import { BacklogModule } from './routes/backlog/backlog.module';
+import { PartiesModule } from './routes/parties/parties.module';
+import { DailyTangoModule } from './routes/daily-tango/daily-tango.module';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { BacklogModule } from './routes/backlog/backlog.module';
     BacklogModule,
     FeedModule,
     NewsModule,
+    PartiesModule,
+    DailyTangoModule,
   ],
 })
 export class AppModule {}

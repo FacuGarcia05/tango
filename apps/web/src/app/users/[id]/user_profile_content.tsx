@@ -8,24 +8,40 @@ import { FollowButton } from "@/components/FollowButton";
 import { ReviewItem } from "@/components/ReviewItem";
 import { ProfileSearch } from "@/components/ProfileSearch";
 import { ApiError, api } from "@/lib/api";
-import type { FollowStats, PaginatedReviews, Review, User, UserSummary } from "@/types";
+import type {
+  FollowStats,
+  ListPaginatedResponse,
+  ListSummary,
+  PaginatedReviews,
+  Review,
+  User,
+  UserSummary,
+} from "@/types";
 
 const PAGE_SIZE = 10;
+const LISTS_PAGE_SIZE = 6;
 const FALLBACK_AVATAR = "/avatar-placeholder.png";
 const FALLBACK_BACKDROP = "/placeholder-cover.svg";
 
-type ProfileTab = "activity" | "reviews" | "ratings";
+type ProfileTab = "activity" | "reviews" | "ratings" | "lists";
 
 interface UserProfileContentProps {
   summary: UserSummary;
   initialReviews: PaginatedReviews;
+  initialLists: ListPaginatedResponse;
   currentUser: User | null;
   userId: string;
 }
 
 type ReviewStatsChange = { likes_count: number; comments_count: number };
 
-export function UserProfileContent({ summary, initialReviews, currentUser, userId }: UserProfileContentProps) {
+export function UserProfileContent({
+  summary,
+  initialReviews,
+  initialLists,
+  currentUser,
+  userId,
+}: UserProfileContentProps) {
   const [tab, setTab] = useState<ProfileTab>("activity");
   const [followStats, setFollowStats] = useState<FollowStats>({
     followers: summary.followers,
@@ -37,6 +53,11 @@ export function UserProfileContent({ summary, initialReviews, currentUser, userI
   const [page, setPage] = useState(1);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
+  const [lists, setLists] = useState<ListSummary[]>(initialLists.items);
+  const [totalLists, setTotalLists] = useState(initialLists.total);
+  const [listsPage, setListsPage] = useState(1);
+  const [loadingLists, setLoadingLists] = useState(false);
+  const [listsError, setListsError] = useState<string | null>(null);
 
   const isCurrentUser = currentUser?.id === userId;
 
@@ -74,6 +95,34 @@ export function UserProfileContent({ summary, initialReviews, currentUser, userI
     }
   }, [loadReviews, page, tab]);
 
+  const loadLists = useCallback(
+    async (targetPage: number) => {
+      setLoadingLists(true);
+      setListsError(null);
+
+      try {
+        const response = await api<ListPaginatedResponse>(
+          `/lists/public/by-user/${userId}?page=${targetPage}&take=${LISTS_PAGE_SIZE}`
+        );
+        setLists(response.items);
+        setTotalLists(response.total);
+      } catch (err) {
+        const message =
+          err instanceof ApiError ? err.message || "No se pudieron cargar las listas" : "No se pudieron cargar las listas";
+        setListsError(message);
+      } finally {
+        setLoadingLists(false);
+      }
+    },
+    [userId]
+  );
+
+  useEffect(() => {
+    if (tab === "lists") {
+      loadLists(listsPage);
+    }
+  }, [tab, listsPage, loadLists]);
+
   const handleStatsChange = useCallback((stats: FollowStats) => {
     setFollowStats(stats);
   }, []);
@@ -96,6 +145,9 @@ export function UserProfileContent({ summary, initialReviews, currentUser, userI
 
   const canPrev = page > 1;
   const canNext = page * PAGE_SIZE < totalReviews;
+
+  const listsCanPrev = listsPage > 1;
+  const listsCanNext = listsPage * LISTS_PAGE_SIZE < totalLists;
 
   const renderTab = () => {
     if (tab === "activity") {
@@ -155,6 +207,76 @@ export function UserProfileContent({ summary, initialReviews, currentUser, userI
                 type="button"
                 onClick={() => canNext && setPage((prev) => prev + 1)}
                 disabled={!canNext || loadingReviews}
+                className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
+    if (tab === "lists") {
+      return (
+        <div className="space-y-4">
+          {loadingLists ? <p className="text-sm text-text-muted">Cargando listas...</p> : null}
+          {listsError ? <p className="text-sm text-danger">{listsError}</p> : null}
+          {!loadingLists && !listsError && lists.length === 0 ? (
+            <p className="text-sm text-text-muted">
+              {isCurrentUser ? "Todavia no creaste listas publicas." : "Este jugador aun no comparte listas publicas."}
+            </p>
+          ) : null}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {lists.map((list) => (
+              <Link
+                key={list.id}
+                href={`/lists/${list.slug}`}
+                className="group flex flex-col rounded-2xl border border-border bg-surface/80 p-4 transition hover:-translate-y-1 hover:border-primary/70 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-lg font-semibold text-text">{list.title}</h3>
+                  <span className="rounded-full border border-border px-3 py-0.5 text-xs uppercase tracking-wide text-text-muted">
+                    {list.items_count} juegos
+                  </span>
+                </div>
+                {list.description ? (
+                  <p className="mt-2 line-clamp-3 text-sm text-text-muted">{list.description}</p>
+                ) : (
+                  <p className="mt-2 text-sm text-text-muted">Sin descripcion.</p>
+                )}
+                {list.items_preview && list.items_preview.length ? (
+                  <div className="mt-4 flex flex-wrap gap-2 text-xs text-text-muted">
+                    {list.items_preview.map((item) => (
+                      <span key={item.id} className="rounded-full border border-border px-3 py-0.5 text-text">
+                        #{item.position} {item.game.title}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <span className="mt-4 text-xs font-semibold text-primary">Ver lista completa</span>
+              </Link>
+            ))}
+          </div>
+
+          {totalLists > LISTS_PAGE_SIZE ? (
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setListsPage((prev) => Math.max(1, prev - 1))}
+                disabled={!listsCanPrev || loadingLists}
+                className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span className="text-sm text-text-muted">
+                Pagina {listsPage} de {Math.max(1, Math.ceil(totalLists / LISTS_PAGE_SIZE))}
+              </span>
+              <button
+                type="button"
+                onClick={() => listsCanNext && setListsPage((prev) => prev + 1)}
+                disabled={!listsCanNext || loadingLists}
                 className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Siguiente
@@ -225,6 +347,15 @@ export function UserProfileContent({ summary, initialReviews, currentUser, userI
             }`}
           >
             Resenas
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("lists")}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+              tab === "lists" ? "bg-primary text-primary-contrast" : "bg-border text-text"
+            }`}
+          >
+            Listas
           </button>
           <button
             type="button"

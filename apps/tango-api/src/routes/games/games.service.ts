@@ -17,6 +17,12 @@ type GameWithRelations = Prisma.gamesGetPayload<{
   };
 }>;
 
+type GameMediaPayload = Prisma.game_mediaGetPayload<{
+  include: {
+    users: { select: { id: true; display_name: true; avatar_url: true } };
+  };
+}>;
+
 interface SimplifiedGame
   extends Omit<GameWithRelations, 'game_genres' | 'game_platforms' | 'games'> {
   genres: Array<{ slug: string; name: string }>;
@@ -266,5 +272,39 @@ export class GamesService {
       select: { slug: true, name: true },
       orderBy: { name: 'asc' },
     });
+  }
+
+  async listMediaBySlug(slug: string) {
+    const game = await this.prisma.games.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (!game) {
+      throw new NotFoundException('Juego no encontrado');
+    }
+
+    const items = await this.prisma.game_media.findMany({
+      where: { game_id: game.id, is_hidden: false },
+      orderBy: { created_at: 'desc' },
+      include: {
+        users: { select: { id: true, display_name: true, avatar_url: true } },
+      },
+    });
+
+    return items.map((item: GameMediaPayload) => ({
+      id: item.id,
+      type: item.type,
+      url: item.url,
+      provider: item.provider,
+      provider_id: item.provider_id,
+      created_at: item.created_at,
+      user: item.users
+        ? {
+            id: item.users.id,
+            display_name: item.users.display_name,
+            avatar_url: item.users.avatar_url ?? null,
+          }
+        : null,
+    }));
   }
 }

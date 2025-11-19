@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/games", label: "Juegos" },
+  { href: "/daily-tango", label: "Daily TANGO" },
 ];
 
 export default function Navbar() {

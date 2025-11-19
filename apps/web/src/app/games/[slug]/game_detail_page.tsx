@@ -4,12 +4,14 @@ import { notFound } from "next/navigation";
 
 import { AddToBacklogButton } from "@/components/AddToBacklogButton";
 import { AddToListButton } from "@/components/AddToListButton";
+import { GameClipSubmit } from "@/components/GameClipSubmit";
+import { GameMediaGallery } from "@/components/GameMediaGallery";
 import { GameMediaUpload } from "@/components/GameMediaUpload";
+import { GamePartiesSection } from "@/components/GamePartiesSection";
 import { GameRatingPanel } from "@/components/GameRatingPanel";
 import { ReviewsSection } from "@/components/ReviewsSection";
-import { SetCoverModal } from "@/components/SetCoverModal";
 import { ApiError, apiServer } from "@/lib/api";
-import type { Game, GameDetail, Taxonomy, User } from "@/types";
+import type { Game, GameDetail, GameMediaItem, PartySummary, Taxonomy, User } from "@/types";
 
 const FALLBACK_COVER = "/placeholder-cover.svg";
 
@@ -53,7 +55,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
     notFound();
   }
 
-  const [dlcs, me] = await Promise.all([
+  const [dlcs, me, media, parties] = await Promise.all([
     apiServer<Game[]>(`/games/${slug}/dlcs`).catch(() => [] as Game[]),
     apiServer<User>(`/auth/me`).catch((error) => {
       if (error instanceof ApiError && error.status === 401) {
@@ -62,6 +64,8 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
       console.error("Failed to load current user for game detail", error);
       return null;
     }),
+    apiServer<GameMediaItem[]>(`/games/${slug}/media`).catch(() => [] as GameMediaItem[]),
+    apiServer<PartySummary[]>(`/games/${slug}/parties`).catch(() => [] as PartySummary[]),
   ]);
 
   let myRating: { value: number | null } | null = null;
@@ -141,46 +145,48 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
             )}
           </div>
 
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),320px]">
+            <div className="space-y-4">
               <div>
                 <h1 className="text-4xl font-bold tracking-tight text-text">{game.title}</h1>
                 <p className="mt-2 text-sm text-text-muted">
                   {genreEntries.length ? genreEntries.map((genre) => genre.name).join(", ") : "Generos no disponibles"}
                 </p>
               </div>
-              {me ? (
-                <div className="flex flex-col gap-3">
-                  <SetCoverModal slug={game.slug} currentCover={game.cover_url ?? ""} />
-                  <GameMediaUpload slug={game.slug} />
-                  <AddToListButton
-                    game={{
-                      id: game.id,
-                      slug: game.slug,
-                      title: game.title,
-                      cover_url: game.cover_url ?? undefined,
-                    }}
-                  />
-                  <AddToBacklogButton
-                    game={{
-                      id: game.id,
-                      slug: game.slug,
-                      title: game.title,
-                      cover_url: game.cover_url ?? undefined,
-                    }}
-                  />
-                </div>
+
+              {game.description ? (
+                <p className="max-w-3xl whitespace-pre-wrap text-base text-text">{game.description}</p>
+              ) : null}
+
+              {platformEntries.length ? (
+                <p className="text-sm text-text-muted">
+                  Plataformas:{" "}
+                  <span className="text-text">{platformEntries.map((platform) => platform.name).join(", ")}</span>
+                </p>
               ) : null}
             </div>
 
-            {game.description ? (
-              <p className="max-w-3xl whitespace-pre-wrap text-base text-text">{game.description}</p>
-            ) : null}
-
-            {platformEntries.length ? (
-              <p className="text-sm text-text-muted">
-                Plataformas: <span className="text-text">{platformEntries.map((platform) => platform.name).join(", ")}</span>
-              </p>
+            {me ? (
+              <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-surface/70 p-4 shadow-sm">
+                <GameMediaUpload slug={game.slug} />
+                <GameClipSubmit slug={game.slug} />
+                <AddToListButton
+                  game={{
+                    id: game.id,
+                    slug: game.slug,
+                    title: game.title,
+                    cover_url: game.cover_url ?? undefined,
+                  }}
+                />
+                <AddToBacklogButton
+                  game={{
+                    id: game.id,
+                    slug: game.slug,
+                    title: game.title,
+                    cover_url: game.cover_url ?? undefined,
+                  }}
+                />
+              </div>
             ) : null}
           </div>
         </div>
@@ -204,6 +210,16 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
           </div>
         </section>
       ) : null}
+
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold text-text">Galeria de la comunidad</h2>
+          <p className="text-sm text-text-muted">Capturas y clips compartidos por jugadores.</p>
+        </div>
+        <GameMediaGallery items={media} />
+      </section>
+
+      <GamePartiesSection slug={game.slug} initialParties={parties} currentUser={me} />
 
       <GameRatingPanel slug={game.slug} stats={normalizedStats} initialValue={myRating?.value ?? null} currentUser={me} />
 
