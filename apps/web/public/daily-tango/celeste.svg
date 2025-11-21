@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360">
+  <rect width="640" height="360" fill="#1e1b4b"/>
+  <circle cx="520" cy="90" r="120" fill="#ec4899" opacity="0.35"/>
+  <text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="70" fill="#fdf2f8">
+    CELESTE
+  </text>
+</svg>

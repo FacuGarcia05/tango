@@ -45,6 +45,9 @@ model daily_tango_attempts {
   guess_game_id          String?                @db.Uuid
   attempt_number         Int
   won                    Boolean                @default(false)
+  score                  Int?
+  duration_ms            Int?
+  payload                Json?
   played_at              DateTime               @default(now()) @db.Timestamptz(6)
   daily_tango_challenges daily_tango_challenges @relation(fields: [challenge_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   games                  games?                 @relation(fields: [guess_game_id], references: [id], onUpdate: NoAction)
@@ -56,12 +59,15 @@ model daily_tango_attempts {
 
 model daily_tango_challenges {
   id                   String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  challenge_date       DateTime               @unique @db.Date
-  solution_game_id     String                 @db.Uuid
+  challenge_date       DateTime               @db.Date
+  solution_game_id     String?                @db.Uuid
+  mode                 daily_tango_mode       @default(word)
   clue_data            Json?
   created_at           DateTime               @default(now()) @db.Timestamptz(6)
   daily_tango_attempts daily_tango_attempts[]
-  games                games                  @relation(fields: [solution_game_id], references: [id], onUpdate: NoAction)
+  games                games?                 @relation(fields: [solution_game_id], references: [id], onUpdate: NoAction)
+
+  @@unique([challenge_date, mode])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -390,6 +396,12 @@ enum game_type {
 enum media_type {
   image
   video
+}
+
+enum daily_tango_mode {
+  word
+  memory
+  reaction
 }
 
 enum party_status {

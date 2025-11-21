@@ -1,5 +1,6 @@
-﻿import {
+import {
   BadRequestException,
+  Body,
   Controller,
   Param,
   Post,
@@ -24,9 +25,19 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import type { JwtPayload } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 
+type ClipProvider = 'youtube' | 'twitch';
+
+interface ClipInfo {
+  provider: ClipProvider;
+  providerId: string;
+  url: string;
+}
+
 @ApiTags('Media')
 @Controller()
 export class MediaController {
+  private static readonly MAX_MEDIA_PER_USER = 5;
+
   constructor(
     private readonly uploadsService: UploadsService,
     private readonly prisma: PrismaService,
@@ -175,6 +186,8 @@ export class MediaController {
       throw new BadRequestException('Juego no encontrado');
     }
 
+    await this.assertMediaQuota(game.id, user.sub);
+
     const upload = await this.handleUpload(file, 'game-media');
     await this.prisma.game_media.create({
       data: {
@@ -190,6 +203,136 @@ export class MediaController {
     return upload;
   }
 
+  @Post('games/:slug/media/clip')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Agregar un clip de YouTube o Twitch a la galeria de un juego' })
+  async uploadGameClip(
+    @Param('slug') slug: string,
+    @CurrentUser() user: JwtPayload,
+    @Body('url') rawUrl?: string,
+  ) {
+    const url = rawUrl?.trim();
+    if (!url) {
+      throw new BadRequestException('Debes enviar un enlace valido');
+    }
+
+    const game = await this.prisma.games.findUnique({ where: { slug } });
+    if (!game) {
+      throw new BadRequestException('Juego no encontrado');
+    }
+
+    await this.assertMediaQuota(game.id, user.sub);
+    const clip = this.parseClipUrl(url);
+    if (!clip) {
+      throw new BadRequestException('Solo aceptamos enlaces de YouTube o Twitch');
+    }
+
+    await this.prisma.game_media.create({
+      data: {
+        game_id: game.id,
+        user_id: user.sub,
+        type: 'video',
+        url: clip.url,
+        provider: clip.provider,
+        provider_id: clip.providerId,
+      },
+    });
+
+    return clip;
+  }
+
+  private async assertMediaQuota(gameId: string, userId: string) {
+    const current = await this.prisma.game_media.count({
+      where: { game_id: gameId, user_id: userId, is_hidden: false },
+    });
+
+    if (current >= MediaController.MAX_MEDIA_PER_USER) {
+      throw new BadRequestException(
+        `Solo podes compartir hasta ${MediaController.MAX_MEDIA_PER_USER} aportes por juego`,
+      );
+    }
+  }
+
+  private parseClipUrl(input: string): ClipInfo | null {
+    let parsed: URL;
+    try {
+      parsed = new URL(input);
+    } catch {
+      return null;
+    }
+
+    const hostname = parsed.hostname.toLowerCase();
+
+    if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
+      const youtubeId =
+        parsed.searchParams.get('v') ||
+        (parsed.pathname.startsWith('/shorts/')
+          ? parsed.pathname.replace('/shorts/', '').split('/')[0]
+          : null) ||
+        (hostname.includes('youtu.be')
+          ? parsed.pathname.replace('/', '').split('/')[0]
+          : null);
+
+      if (!youtubeId) {
+        return null;
+      }
+
+      return {
+        provider: 'youtube',
+        providerId: youtubeId,
+        url: `https://youtu.be/${youtubeId}`,
+      };
+    }
+
+    if (hostname.includes('twitch.tv')) {
+      const normalizedPath = parsed.pathname.replace(/\/+$/, '');
+
+      if (hostname === 'clips.twitch.tv') {
+        const slug = normalizedPath.replace(/^\/+/, '').split('/')[0];
+        if (!slug) {
+          return null;
+        }
+
+        return {
+          provider: 'twitch',
+          providerId: slug,
+          url: `https://clips.twitch.tv/${slug}`,
+        };
+      }
+
+      const clipIndex = normalizedPath.indexOf('/clip/');
+      if (clipIndex >= 0) {
+        const slug = normalizedPath.slice(clipIndex + 6).split('/')[0];
+        if (!slug) {
+          return null;
+        }
+
+        return {
+          provider: 'twitch',
+          providerId: slug,
+          url: `https://clips.twitch.tv/${slug}`,
+        };
+      }
+
+      if (normalizedPath.startsWith('/videos/')) {
+        const videoId = normalizedPath.replace('/videos/', '').split('/')[0];
+        if (!videoId) {
+          return null;
+        }
+
+        return {
+          provider: 'twitch',
+          providerId: videoId,
+          url: `https://www.twitch.tv/videos/${videoId}`,
+        };
+      }
+    }
+
+    return null;
+  }
+
   private async handleUpload(file: Express.Multer.File, folder: string) {
     if (!file.mimetype.startsWith('image/')) {
       throw new BadRequestException('El archivo debe ser una imagen');
@@ -202,3 +345,4 @@ export class MediaController {
     return this.uploadsService.handleUpload(file, folder);
   }
 }
+

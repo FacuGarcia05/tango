@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360">
+  <rect width="640" height="360" fill="#020617"/>
+  <circle cx="520" cy="120" r="30" fill="#fde047"/>
+  <text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="64" fill="#e2e8f0" letter-spacing="5">
+    STARFIELD
+  </text>
+</svg>

@@ -268,3 +268,120 @@ export interface NewsPaginatedResponse {
   take: number;
   items: NewsItem[];
 }
+
+export type PartyStatus = "open" | "closed" | "full" | "cancelled";
+
+export interface PartyMemberSummary {
+  id: string;
+  joined_at: string;
+  user: {
+    id: string;
+    display_name: string;
+    avatar_url?: string | null;
+  } | null;
+}
+
+export interface PartySummary {
+  id: string;
+  game_id: string;
+  host_user_id: string;
+  platform?: string | null;
+  timezone?: string | null;
+  capacity: number;
+  status: PartyStatus;
+  description?: string | null;
+  created_at: string;
+  host: {
+    id: string;
+    display_name: string;
+    avatar_url?: string | null;
+  } | null;
+  members: PartyMemberSummary[];
+  member_count: number;
+}
+
+export interface GameMediaItem {
+  id: string;
+  type: "image" | "video";
+  url: string;
+  provider?: string | null;
+  provider_id?: string | null;
+  created_at?: string;
+  user?: {
+    id: string;
+    display_name: string;
+    avatar_url?: string | null;
+  } | null;
+}
+
+export type DailyTangoMode = "word" | "memory" | "reaction";
+
+export interface DailyTangoAttempt {
+  id: string;
+  attempt_number: number;
+  won: boolean;
+  score?: number | null;
+  duration_ms?: number | null;
+  payload?: unknown;
+  played_at: string;
+}
+
+export interface DailyTangoWordConfig {
+  hint: string;
+  theme: string;
+  length: number;
+}
+
+export interface DailyTangoMemoryCard {
+  slug: string;
+  title: string;
+  image: string;
+}
+
+export interface DailyTangoMemoryConfig {
+  deckId: string;
+  title: string;
+  cards: DailyTangoMemoryCard[];
+}
+
+export interface DailyTangoReactionConfig {
+  minDelayMs: number;
+  maxDelayMs: number;
+}
+
+export interface DailyTangoChallenge {
+  id: string;
+  mode: DailyTangoMode;
+  available_on: string;
+  config: DailyTangoWordConfig | DailyTangoMemoryConfig | DailyTangoReactionConfig;
+  attempts: DailyTangoAttempt[];
+  remaining_attempts: number;
+  max_attempts: number;
+  completed: boolean;
+  streak: number;
+  solution?: string | null;
+}
+
+export interface DailyTangoSummary {
+  date: string;
+  challenges: DailyTangoChallenge[];
+}
+
+export interface DailyTangoLeaderboardEntry {
+  user: {
+    id: string;
+    display_name: string;
+    avatar_url?: string | null;
+  };
+  value: number;
+  formatted: string;
+  detail?: string | null;
+}
+
+export interface DailyTangoLeaderboard {
+  mode: DailyTangoMode;
+  period_days: number;
+  metric: string;
+  direction: "asc" | "desc";
+  entries: DailyTangoLeaderboardEntry[];
+}

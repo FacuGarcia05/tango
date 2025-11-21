@@ -35,6 +35,11 @@ export class GamesController {
     return this.service.findDlcsOf(slug);
   }
 
+  @Get(':slug/media')
+  media(@Param('slug') slug: string) {
+    return this.service.listMediaBySlug(slug);
+  }
+
   @Put(':slug/cover')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
