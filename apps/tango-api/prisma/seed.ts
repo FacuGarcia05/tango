@@ -189,6 +189,52 @@ async function main() {
     },
   });
 
+  const mockNews = [
+    {
+      slug: "neo-city-racer-launch",
+      title: "¡Salio Neo City Racer!",
+      source: "Arcadia Press",
+      excerpt: "El nuevo arcade futurista llega hoy con cooperativo local y un OST sintetizado imperdible.",
+      cover_url: "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=900&q=80",
+      published_at: new Date(Date.now() - 1000 * 60 * 60 * 24),
+      source_url: "https://example.com/neo-city-racer",
+    },
+    {
+      slug: "mist-chronicles-expansion",
+      title: "Nueva expansion de Mist Chronicles",
+      source: "Fantasy Wire",
+      excerpt: "El parche 2.0 agrega una region helada, armas legendarias y raids para cuatro jugadores.",
+      cover_url: "https://images.unsplash.com/photo-1509420316987-d27fbb56528c?auto=format&fit=crop&w=900&q=80",
+      published_at: new Date(Date.now() - 1000 * 60 * 60 * 30),
+      source_url: "https://example.com/mist-chronicles",
+    },
+    {
+      slug: "pixel-farm-demo",
+      title: "Demo sorpresa de Pixel Farm",
+      source: "Indie Radar",
+      excerpt: "El sandbox de granjas retro se puede probar gratis durante el fin de semana en todas las plataformas.",
+      cover_url: "https://images.unsplash.com/photo-1485579149621-3123dd979885?auto=format&fit=crop&w=900&q=80",
+      published_at: new Date(Date.now() - 1000 * 60 * 60 * 48),
+      source_url: "https://example.com/pixel-farm",
+    },
+  ];
+
+  for (const news of mockNews) {
+    await prisma.news.upsert({
+      where: { slug: news.slug },
+      update: {},
+      create: {
+        slug: news.slug,
+        title: news.title,
+        source: news.source,
+        excerpt: news.excerpt,
+        cover_url: news.cover_url,
+        published_at: news.published_at,
+        source_url: news.source_url,
+      },
+    });
+  }
+
   // actividades demo para el feed
   await prisma.activities.createMany({
     data: [

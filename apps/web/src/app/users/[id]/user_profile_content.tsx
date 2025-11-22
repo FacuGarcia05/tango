@@ -15,13 +15,17 @@ import type {
   PaginatedReviews,
   Review,
   User,
+  UserRating,
+  UserRatingsResponse,
   UserSummary,
 } from "@/types";
 
 const PAGE_SIZE = 10;
 const LISTS_PAGE_SIZE = 6;
+const RATINGS_PAGE_SIZE = 8;
 const FALLBACK_AVATAR = "/avatar-placeholder.png";
 const FALLBACK_BACKDROP = "/placeholder-cover.svg";
+const FALLBACK_COVER = "/placeholder-cover.svg";
 
 type ProfileTab = "activity" | "reviews" | "ratings" | "lists";
 
@@ -58,6 +62,11 @@ export function UserProfileContent({
   const [listsPage, setListsPage] = useState(1);
   const [loadingLists, setLoadingLists] = useState(false);
   const [listsError, setListsError] = useState<string | null>(null);
+  const [ratings, setRatings] = useState<UserRating[]>([]);
+  const [totalRatings, setTotalRatings] = useState(0);
+  const [ratingsPage, setRatingsPage] = useState(1);
+  const [loadingRatings, setLoadingRatings] = useState(false);
+  const [ratingsError, setRatingsError] = useState<string | null>(null);
 
   const isCurrentUser = currentUser?.id === userId;
 
@@ -117,11 +126,40 @@ export function UserProfileContent({
     [userId]
   );
 
+  const loadRatings = useCallback(
+    async (targetPage: number) => {
+      setLoadingRatings(true);
+      setRatingsError(null);
+      try {
+        const response = await api<UserRatingsResponse>(
+          `/users/${userId}/ratings?page=${targetPage}&take=${RATINGS_PAGE_SIZE}`
+        );
+        setRatings(response.items);
+        setTotalRatings(response.total);
+      } catch (err) {
+        const message =
+          err instanceof ApiError
+            ? err.message || "No se pudieron cargar las calificaciones"
+            : "No se pudieron cargar las calificaciones";
+        setRatingsError(message);
+      } finally {
+        setLoadingRatings(false);
+      }
+    },
+    [userId]
+  );
+
   useEffect(() => {
     if (tab === "lists") {
       loadLists(listsPage);
     }
   }, [tab, listsPage, loadLists]);
+
+  useEffect(() => {
+    if (tab === "ratings") {
+      loadRatings(ratingsPage);
+    }
+  }, [tab, ratingsPage, loadRatings]);
 
   const handleStatsChange = useCallback((stats: FollowStats) => {
     setFollowStats(stats);
@@ -148,6 +186,8 @@ export function UserProfileContent({
 
   const listsCanPrev = listsPage > 1;
   const listsCanNext = listsPage * LISTS_PAGE_SIZE < totalLists;
+  const ratingsCanPrev = ratingsPage > 1;
+  const ratingsCanNext = ratingsPage * RATINGS_PAGE_SIZE < totalRatings;
 
   const renderTab = () => {
     if (tab === "activity") {
@@ -287,9 +327,88 @@ export function UserProfileContent({
       );
     }
 
+    if (tab === "ratings") {
+      return (
+        <div className="space-y-4">
+          {loadingRatings ? <p className="text-sm text-text-muted">Cargando calificaciones...</p> : null}
+          {ratingsError ? <p className="text-sm text-danger">{ratingsError}</p> : null}
+          {!loadingRatings && !ratingsError && ratings.length === 0 ? (
+            <p className="text-sm text-text-muted">Este jugador aun no compartio calificaciones.</p>
+          ) : null}
+
+          <div className="space-y-3">
+            {ratings.map((rating) => {
+              const game = rating.game;
+              const cover = game?.cover_url ?? FALLBACK_COVER;
+              const updatedAt = rating.updated_at || rating.created_at;
+              const formattedDate = new Date(updatedAt).toLocaleDateString("es-AR", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              });
+              return (
+                <Link
+                  key={rating.id}
+                  href={game ? `/games/${game.slug}` : "#"}
+                  className="flex gap-4 rounded-2xl border border-border/70 bg-surface/80 p-4 transition hover:-translate-y-1 hover:border-primary/70 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                >
+                  <div className="relative h-24 w-16 overflow-hidden rounded-xl border border-border/60 bg-bg/70">
+                    <Image src={cover} alt={game?.title || "Juego"} fill className="object-cover" sizes="64px" />
+                  </div>
+                  <div className="flex flex-1 flex-col gap-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-base font-semibold text-text">{game?.title ?? "Juego eliminado"}</p>
+                      <span className="text-xs text-text-muted">{formattedDate}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <svg
+                          key={index}
+                          viewBox="0 0 24 24"
+                          className={`h-4 w-4 ${rating.score >= index + 1 ? "text-primary" : "text-border"}`}
+                          fill="currentColor"
+                        >
+                          <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                        </svg>
+                      ))}
+                      <span className="text-sm font-semibold text-text">{rating.score.toFixed(1)} / 5</span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {totalRatings > RATINGS_PAGE_SIZE ? (
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setRatingsPage((prev) => Math.max(1, prev - 1))}
+                disabled={!ratingsCanPrev || loadingRatings}
+                className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span className="text-sm text-text-muted">
+                Pagina {ratingsPage} de {Math.max(1, Math.ceil(totalRatings / RATINGS_PAGE_SIZE))}
+              </span>
+              <button
+                type="button"
+                onClick={() => ratingsCanNext && setRatingsPage((prev) => prev + 1)}
+                disabled={!ratingsCanNext || loadingRatings}
+                className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
     return (
       <div className="rounded-2xl border border-border bg-surface/80 p-5 text-sm text-text-muted">
-        Las calificaciones publicas estaran disponibles pronto. Mientras tanto, explora las resenas de este jugador.
+        Selecciona una pestaña para ver la actividad de este jugador.
       </div>
     );
   };

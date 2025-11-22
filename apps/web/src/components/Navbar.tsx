@@ -85,7 +85,7 @@ export default function Navbar() {
     }
 
     return (
-      <div className="flex items-center gap-3 text-sm font-medium">
+      <div className="flex items-center gap-3 text-base font-medium">
         <Link
           href="/login"
           className="rounded-md border border-border px-3 py-1.5 text-text transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
@@ -105,14 +105,14 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 border-b border-border/60 bg-bg/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-8">
           <Link
             href="/"
-            className="text-lg font-semibold tracking-tight text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            className="text-2xl font-semibold tracking-tight text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
           >
             Tango
           </Link>
-          <div className="flex items-center gap-4 text-sm font-medium text-text-muted">
+          <div className="flex items-center gap-5 text-base font-medium text-text-muted">
             {navLinks.map(({ href, label }) => {
               const isActive = pathname === href;
               return (

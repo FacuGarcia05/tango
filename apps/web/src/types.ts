@@ -183,6 +183,21 @@ export interface ListPaginatedResponse {
   items: ListSummary[];
 }
 
+export interface UserRating {
+  id: string;
+  score: number;
+  created_at: string;
+  updated_at?: string;
+  game: ListItemGame | null;
+}
+
+export interface UserRatingsResponse {
+  total: number;
+  page: number;
+  take: number;
+  items: UserRating[];
+}
+
 export interface BacklogEntry {
   id: string;
   created_at: string;

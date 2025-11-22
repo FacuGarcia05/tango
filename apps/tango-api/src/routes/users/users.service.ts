@@ -15,6 +15,10 @@ type UserWithProfileResult = Prisma.usersGetPayload<{
   include: { profiles: true };
 }>;
 
+type RatingWithGame = Prisma.ratingsGetPayload<{
+  include: { games: { select: { id: true; slug: true; title: true; cover_url: true } } };
+}>;
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -204,6 +208,34 @@ export class UsersService {
     };
   }
 
+  async getRatings(targetId: string, page = 1, take = 10) {
+    await this.ensureUserExists(targetId);
+
+    const safeTake = Math.min(Math.max(take ?? 10, 1), 50);
+    const safePage = Math.max(page ?? 1, 1);
+    const skip = (safePage - 1) * safeTake;
+
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.ratings.count({ where: { user_id: targetId } }),
+      this.prisma.ratings.findMany({
+        where: { user_id: targetId },
+        orderBy: { updated_at: 'desc' },
+        take: safeTake,
+        skip,
+        include: {
+          games: { select: { id: true, slug: true, title: true, cover_url: true } },
+        },
+      }),
+    ]);
+
+    return {
+      total,
+      page: safePage,
+      take: safeTake,
+      items: items.map((rating) => this.presentRating(rating)),
+    };
+  }
+
   async searchUsers(
     viewerId: string | undefined,
     q?: string,
@@ -373,6 +405,23 @@ export class UsersService {
       backdropUrl: profile?.backdrop_url ?? null,
       favGenres: profile?.fav_genres ?? [],
       favPlatforms: profile?.fav_platforms ?? [],
+    };
+  }
+
+  private presentRating(rating: RatingWithGame) {
+    return {
+      id: rating.id,
+      score: Number(rating.score),
+      created_at: rating.created_at,
+      updated_at: rating.updated_at,
+      game: rating.games
+        ? {
+            id: rating.games.id,
+            slug: rating.games.slug,
+            title: rating.games.title,
+            cover_url: rating.games.cover_url ?? null,
+          }
+        : null,
     };
   }
 
