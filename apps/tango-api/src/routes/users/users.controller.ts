@@ -85,6 +85,22 @@ export class UsersController {
     return this.usersService.getSummary(targetId, user?.sub);
   }
 
+  @Get(':id/ratings')
+  @UseGuards(JwtOptionalAuthGuard)
+  ratings(
+    @Param('id', new ParseUUIDPipe()) targetId: string,
+    @Query('page') page?: string,
+    @Query('take') take?: string,
+  ) {
+    const numericPage = page ? Number(page) : 1;
+    const numericTake = take ? Number(take) : 10;
+    return this.usersService.getRatings(
+      targetId,
+      Number.isNaN(numericPage) ? 1 : numericPage,
+      Number.isNaN(numericTake) ? 10 : numericTake,
+    );
+  }
+
   @Get('search')
   @UseGuards(JwtOptionalAuthGuard)
   @ApiQuery({
